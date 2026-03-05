@@ -14,6 +14,8 @@
   </style>
 </head>
 <body>
+
+<!-- Gate -->
 <div id="gate" class="gate">
   <div class="gate-card">
     <div class="title">主播登入</div>
@@ -26,13 +28,14 @@
   </div>
 </div>
 
+<!-- App -->
 <div id="app" style="display:none">
   <header class="topbar">
     <div class="brand">
       <div class="logo">🎛️</div>
       <div>
         <div class="title">噗妮KTV（主播）</div>
-        <div class="subtitle">主播點歌/排行榜點歌：直接進 Queue</div>
+        <div class="subtitle">主播點歌/排行榜點歌：直接進 Queue｜觀眾點歌：Pending 待通過</div>
       </div>
     </div>
     <div class="muted small">主播頁</div>
@@ -48,28 +51,51 @@
 
       <div class="panel">
         <div class="panel-title">同步狀態</div>
-        <div class="panel-body"><div class="muted small" id="syncStatus">尚未同步</div></div>
+        <div class="panel-body">
+          <div class="muted small" id="syncStatus">尚未同步</div>
+        </div>
       </div>
     </aside>
 
     <section class="content">
+
+      <!-- Queue + Pending -->
       <div class="page" id="page-queue">
-        <div class="card">
-          <div class="card-h">🎤 播放清單（Queue）</div>
-          <div id="queueList" class="list"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-h">🎤 播放清單（Queue）</div>
+            <div id="queueList" class="list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h">✅ 待通過（Pending）</div>
+            <div class="muted small">觀眾點歌先在這裡，按通過才會加入 Queue</div>
+            <div id="pendingList" class="list" style="margin-top:10px;"></div>
+          </div>
         </div>
       </div>
 
+      <!-- Songs -->
       <div class="page hidden" id="page-songs">
         <div class="toolbar">
           <div class="search">
-            <input id="songSearch" placeholder="搜尋歌名 / 歌手（不分大小寫）" />
+            <input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤（不分大小寫）" />
             <button id="songSearchBtn" class="btn btn-primary">搜尋</button>
           </div>
         </div>
+
+        <div style="margin-bottom:12px;">
+          <button id="toggleCats" class="btn">顯示/隱藏 分類</button>
+          <div id="catPanel" class="panel" style="display:none;">
+            <div class="panel-title">分類（點歌正下方）</div>
+            <div class="panel-body" id="catChips"></div>
+          </div>
+        </div>
+
         <div id="songGrid" class="song-grid"></div>
       </div>
 
+      <!-- Leaderboard -->
       <div class="page hidden" id="page-leaderboard">
         <div class="card">
           <div class="card-h">🏆 排行榜（可直接加入 Queue）</div>
@@ -77,6 +103,7 @@
         </div>
       </div>
 
+      <!-- Wishlist -->
       <div class="page hidden" id="page-wishlist">
         <div class="card">
           <div class="card-h">💬 許願池（主播可看許願者）</div>
@@ -84,6 +111,7 @@
         </div>
       </div>
 
+      <!-- OBS -->
       <div class="page hidden" id="page-obs">
         <div class="card">
           <div class="card-h">🟪 OBS Browser Source</div>

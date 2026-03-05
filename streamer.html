@@ -11,6 +11,7 @@
       border-radius:18px;box-shadow:0 18px 40px rgba(0,0,0,.5);padding:18px;}
     .gate-row{display:flex;gap:8px}
     .gate-row input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(10,10,18,.65);color:var(--text)}
+    .topbar-right{display:flex;gap:10px;align-items:center}
   </style>
 </head>
 <body>
@@ -20,7 +21,7 @@
     <div class="title">主播登入</div>
     <div class="muted small" style="margin-top:6px;">密碼在後端驗證（前端不存密碼）</div>
     <div class="gate-row" style="margin-top:12px;">
-      <input id="pw" placeholder="輸入密碼" />
+      <input id="pw" placeholder="輸入密碼" type="password" />
       <button id="loginBtn" class="btn btn-primary">登入</button>
     </div>
     <div id="gateMsg" class="muted small" style="margin-top:10px;"></div>
@@ -36,7 +37,11 @@
         <div class="subtitle">點歌/排行榜點歌：直接進播放清單（Queue）</div>
       </div>
     </div>
-    <div class="muted small">主播頁</div>
+
+    <div class="topbar-right">
+      <div class="muted small">主播頁</div>
+      <button id="logoutBtn" class="btn btn-mini">登出</button>
+    </div>
   </header>
 
   <main class="layout">

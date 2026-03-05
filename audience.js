@@ -65,50 +65,35 @@ function render(){
 /* -------------------- */
 
 function renderHome(){
+  const box = document.getElementById("homeQueue");
+  if(!box) return;
 
-  const box = $("homeQueue");
-
-  if(!queue.length){
+  if(!queue || !queue.length){
     box.innerHTML = `<div class="muted small">目前沒有播放清單</div>`;
     return;
   }
 
-  const frag = document.createDocumentFragment();
+  // ✅ 不做 slice、不限制數量
+  box.innerHTML = queue.map((q, i) => {
+    const who = q.by ? `🎯 ${esc(q.by)}` : "";
+    const sub = esc(q.artist || (q.category==="其他" ? (q.subtag||"") : ""));
+    const whoLine = (who && sub) ? `${who} · ${sub}` : (who || sub);
 
-  queue.forEach((q,i)=>{
-
-    const row = document.createElement("div");
-    row.className="row";
-
-    const who = q.by ? `🎯 ${q.by}` : "";
-
-    const sub = q.artist || (q.category==="其他" ? (q.subtag||"") : "");
-
-    row.innerHTML=`
-      <div class="row-left">
-        <div class="row-title">
-          <span class="rank">${i+1}</span>
-          ${esc(q.title||"")}
-          ${q.practice?" ⭐":""}
-          <span class="pill">${esc(q.category||"")}</span>
-        </div>
-        <div class="row-sub">
-          ${who}
-          ${who && sub ? " · " : ""}
-          ${esc(sub)}
+    return `
+      <div class="row">
+        <div class="row-left">
+          <div class="row-title">
+            <span class="rank">${i+1}</span>
+            ${esc(q.title||"")}
+            ${q.practice ? " ⭐" : ""}
+            <span class="pill">${esc(q.category||"")}</span>
+          </div>
+          <div class="row-sub">${whoLine}</div>
         </div>
       </div>
     `;
-
-    frag.appendChild(row);
-  });
-
-  box.replaceChildren(frag);
+  }).join("");
 }
-
-/* -------------------- */
-/* SONGS */
-/* -------------------- */
 
 function renderSongs(){
 

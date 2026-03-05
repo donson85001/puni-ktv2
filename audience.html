@@ -1,34 +1,119 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>噗妮KTV｜觀眾</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>噗妮KTV（觀眾）</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<header>噗妮KTV - 觀眾</header>
-<div class="container">
-  <h2>點歌</h2>
-  <div id="songs"></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🎤</div>
+      <div>
+        <div class="title">噗妮KTV（觀眾）</div>
+        <div class="subtitle">⭐ = 練習中｜可唱不顯示符號</div>
+      </div>
+    </div>
+    <div class="muted small">觀眾頁</div>
+  </header>
 
-  <h2>播放清單（僅顯示）</h2>
-  <div id="queuePreview"></div>
+  <main class="layout">
+    <aside class="sidebar">
+      <button class="nav active" data-page="home">🏠 首頁</button>
+      <button class="nav" data-page="songs">🎵 點歌</button>
+      <button class="nav" data-page="leaderboard">🏆 排行榜</button>
+      <button class="nav" data-page="wishlist">💬 許願池</button>
 
-  <h2>排行榜（可點歌）</h2>
-  <div id="leader"></div>
+      <div class="divider"></div>
 
-  <h2>許願池</h2>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <input id="wname" placeholder="許願者（暱稱）">
-    <input id="wsong" placeholder="歌名 / 版本 / 歌手">
-    <button onclick="wish()">送出</button>
-  </div>
-  <h3>許願列表（只顯示歌名）</h3>
-  <div id="wishPreview"></div>
-</div>
+      <div class="panel">
+        <div class="panel-title">分類（點歌頁會顯示）</div>
+        <div class="muted small">在「點歌」頁按下分類按鈕才會出現</div>
+      </div>
 
-<script src="common.js"></script>
-<script src="audience.js"></script>
+      <div class="panel">
+        <div class="panel-title">同步狀態</div>
+        <div class="panel-body">
+          <div class="muted small" id="syncStatus">尚未同步</div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="content">
+      <div class="page" id="page-home">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-h">🙏 感謝各位支持</div>
+            <div class="muted">
+              這裡放你原本首頁的「感謝/打賞/圖片」內容即可（可直接搬舊站）。
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h">🎤 目前播放清單（僅顯示）</div>
+            <div id="homeQueue" class="list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-songs">
+        <div class="toolbar">
+          <div class="search">
+            <input id="songSearch" placeholder="搜尋歌名 / 歌手（不分大小寫）" />
+            <button id="songSearchBtn" class="btn btn-primary">搜尋</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <button id="toggleCats" class="btn">顯示/隱藏 分類</button>
+          <div id="catPanel" class="panel" style="display:none;">
+            <div class="panel-title">分類（點歌正下方）</div>
+            <div class="panel-body" id="catChips"></div>
+          </div>
+        </div>
+
+        <div id="songGrid" class="song-grid"></div>
+      </div>
+
+      <div class="page hidden" id="page-leaderboard">
+        <div class="card">
+          <div class="card-h">🏆 排行榜（可點歌）</div>
+          <div id="leaderboardList" class="list"></div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-wishlist">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-h">💬 許願池</div>
+            <div class="muted small">觀眾列表只顯示歌名；主播看得到許願者</div>
+            <div class="search" style="margin-top:10px;">
+              <input id="wishName" placeholder="許願者（暱稱）" />
+              <input id="wishSong" placeholder="歌名 / 版本 / 歌手" />
+              <button id="wishBtn" class="btn btn-primary">送出</button>
+            </div>
+            <div id="wishList" class="list" style="margin-top:10px;"></div>
+          </div>
+          <div class="card">
+            <div class="card-h">📌 規則</div>
+            <div class="muted">
+              <ul>
+                <li><b>可唱</b>：不顯示符號</li>
+                <li><b>⭐</b>：練習中</li>
+                <li>排行榜 / 點歌 都能直接點歌</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer muted small">
+        觀眾頁｜資料同步：每 5 秒
+      </footer>
+    </section>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="audience.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // common.js (GET only - avoid CORS issues on GitHub Pages)
 
-const API = "https://script.google.com/macros/s/AKfycbz4nuUA7KXBJWEKZW4Q5hpBsOGy3cD_f-vyu0nUHys3ySc1akT-YBXnnIMFqXnlj2zS/exec";
+const API = "https://script.google.com/macros/s/AKfycbzfoTuEV36_BZG3oWSvBvBPyrZ_mlxH3OizsLbmrM7C-WRidA7VFbPPVpnYwyke0xfG/exec";
 
 function esc(s){
   return String(s||"").replace(/[&<>"]/g,a=>({

@@ -1,5 +1,7 @@
-// audience.js (fix: category UX + leaderboard alignment)
-// Requires: common.js provides api(), esc(), toast()
+// audience.js
+// 觀眾：點歌 -> Pending（待主播通過）
+// 點歌列表：依播放次數(plays) 由大到小排序
+// 其他分類：用 subtag 顯示在「歌手位置」
 
 let songs = [];
 let queue = [];
@@ -11,7 +13,7 @@ const MAIN_CATS = ["女歌手", "男歌手", "其他"];
 const OTHER_SUBTAGS = ["日", "英", "韓", "Rap", "情歌對唱", "嗨歌/怪歌", "舞蹈"];
 
 let mainCat = "女歌手";
-let subCat  = "全部";
+let subCat = "全部";
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,10 +30,8 @@ function init() {
       document.querySelectorAll(".page").forEach((x) => x.classList.add("hidden"));
       $("page-" + p).classList.remove("hidden");
 
-      // ✅ UX：進入點歌頁自動打開分類面板
-      if (p === "songs") {
-        $("catPanel").style.display = "block";
-      }
+      // 進入點歌頁自動打開分類面板
+      if (p === "songs") $("catPanel").style.display = "block";
     };
   });
 
@@ -51,7 +51,6 @@ function init() {
   // 許願
   $("wishBtn").onclick = sendWish;
 
-  // 初次注入大分類 chips（女/男/其他）
   rebuildMainCatChips();
 
   sync();
@@ -61,7 +60,6 @@ function init() {
 /* ===== 分類 chips ===== */
 
 function rebuildMainCatChips() {
-  // ✅ 直接把「大分類 chips」插在 catPanel 最上方
   const panel = $("catPanel");
 
   let wrap = panel.querySelector("[data-maincats='1']");
@@ -170,12 +168,17 @@ function renderSongs() {
 
   let list = filterSongsByCategory(songs);
 
+  // ✅ 依播放次數排序：多的在上
+  list.sort((a, b) => (b.plays || 0) - (a.plays || 0));
+
+  // 搜尋（不分大小寫）- 其他也允許搜到 subtag
   if (q) {
-    list = list.filter(
-      (s) =>
-        String(s.title || "").toLowerCase().includes(q) ||
-        String(s.artist || "").toLowerCase().includes(q)
-    );
+    list = list.filter((s) => {
+      const t = String(s.title || "").toLowerCase();
+      const a = String(s.artist || "").toLowerCase();
+      const st = String(s.subtag || "").toLowerCase();
+      return t.includes(q) || a.includes(q) || st.includes(q);
+    });
   }
 
   grid.innerHTML = list.length ? "" : `<div class="muted small">沒有歌曲</div>`;
@@ -194,12 +197,13 @@ function renderSongs() {
       </div>
       <div class="song-actions">
         <button class="btn btn-mini btn-primary">點歌</button>
-        <span class="pill">播放 <span class="plays">${Number(s.plays || 0)}</span></span>
+        <span class="pill">播放 ${Number(s.plays || 0)}</span>
       </div>
     `;
     el.querySelector("button").onclick = async () => {
+      // ✅ 觀眾點歌 -> Pending
       await api("suggest", { songId: s.id, by: "viewer" });
-      toast("已送出點歌（待主播確認）");
+      toast("已送出點歌（待主播通過）");
     };
     grid.appendChild(el);
   });
@@ -228,16 +232,18 @@ function renderLeaderboard() {
           ${esc(s.title || "")}${s.practice ? " ⭐" : ""}
           <span class="pill">${esc(s.category || "")}</span>
         </div>
-        <div class="row-sub">${esc(s.artist || "")}</div>
+        <div class="row-sub">
+          ${esc(s.artist || (s.category === "其他" ? s.subtag || "" : ""))}
+        </div>
       </div>
       <div class="row-actions">
-        <span class="plays-box"><span class="plays">${Number(s.plays || 0)}</span></span>
+        <span class="pill">播放 ${Number(s.plays || 0)}</span>
         <button class="btn btn-mini btn-primary">點歌</button>
       </div>
     `;
     row.querySelector("button").onclick = async () => {
       await api("suggest", { songId: s.id, by: "viewer" });
-      toast("已送出點歌（待主播確認）");
+      toast("已送出點歌（待主播通過）");
     };
     box.appendChild(row);
   });

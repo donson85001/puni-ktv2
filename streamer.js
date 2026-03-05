@@ -1,4 +1,4 @@
-// streamer.js (GET only)
+// streamer.js (robust version)
 
 let authed = false;
 
@@ -18,8 +18,11 @@ const $ = (id) => document.getElementById(id);
 init();
 
 function init(){
-  $("loginBtn").onclick = login;
-  $("pw").addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
+  const loginBtn = $("loginBtn");
+  const pwInput  = $("pw");
+
+  if (loginBtn) loginBtn.onclick = login;
+  if (pwInput) pwInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
 
   document.querySelectorAll(".nav").forEach((btn)=>{
     btn.onclick = ()=>{
@@ -27,30 +30,50 @@ function init(){
       btn.classList.add("active");
       show(btn.dataset.page);
 
-      if(btn.dataset.page==="songs") $("catPanel").style.display="block";
+      if(btn.dataset.page==="songs") {
+        const cp = $("catPanel");
+        if (cp) cp.style.display="block";
+      }
     };
   });
 
-  $("songSearchBtn").onclick = renderSongs;
-  $("songSearch").addEventListener("input", renderSongs);
+  const songSearchBtn = $("songSearchBtn");
+  const songSearch = $("songSearch");
+  if (songSearchBtn) songSearchBtn.onclick = renderSongs;
+  if (songSearch) songSearch.addEventListener("input", renderSongs);
 
-  $("toggleCats").onclick = ()=>{
-    const p = $("catPanel");
-    p.style.display = p.style.display==="none" ? "block" : "none";
-  };
+  const toggleCats = $("toggleCats");
+  if (toggleCats) {
+    toggleCats.onclick = ()=>{
+      const p = $("catPanel");
+      if (!p) return;
+      p.style.display = p.style.display==="none" ? "block" : "none";
+    };
+  }
+
+  // OBS URL（可有可無）
+  const obsUrl = $("obsUrl");
+  if (obsUrl) {
+    obsUrl.textContent = location.href.replace(/streamer\.html(\?.*)?$/i, "obs.html") + "?limit=10&transparent=1&title=1";
+  }
 }
 
 async function login(){
-  const pw = ($("pw").value||"").trim();
+  const pw = ($("pw")?.value||"").trim();
+  const gateMsg = $("gateMsg");
+
   const r = await api("verify",{password:pw}).catch(()=>({ok:false}));
   if(!r.ok){
-    $("gateMsg").textContent="密碼錯誤或後端未部署成功";
+    if (gateMsg) gateMsg.textContent="密碼錯誤或後端未部署成功";
     return;
   }
 
   authed = true;
-  $("gate").style.display="none";
-  $("app").style.display="block";
+
+  const gate = $("gate");
+  const app = $("app");
+  if (gate) gate.style.display="none";
+  if (app) app.style.display="block";
 
   rebuildMainCatChips();
   await sync();
@@ -59,13 +82,17 @@ async function login(){
 
 function show(name){
   document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
-  $("page-"+name).classList.remove("hidden");
+  const page = $("page-"+name);
+  if (page) page.classList.remove("hidden");
 }
 
 /* ===== 分類 chips ===== */
 
 function rebuildMainCatChips(){
   const panel = $("catPanel");
+  const chips = $("catChips");
+  if (!panel || !chips) return;
+
   let wrap = panel.querySelector("[data-maincats='1']");
   if(!wrap){
     wrap = document.createElement("div");
@@ -107,6 +134,8 @@ function buildSingerSubtags(allSongs, category){
 
 function rebuildSubtagChips(){
   const box = $("catChips");
+  if (!box) return;
+
   box.innerHTML="";
 
   let subtags=[];
@@ -158,6 +187,8 @@ function filterSongsByCategory(allSongs){
 
 function renderQueue(){
   const box = $("queueList");
+  if (!box) return;
+
   box.innerHTML = queue.length ? "" : `<div class="muted small">Queue 是空的</div>`;
 
   queue.forEach((q,idx)=>{
@@ -182,6 +213,8 @@ function renderQueue(){
 
 function renderPending(){
   const box = $("pendingList");
+  if (!box) return;
+
   box.innerHTML = pending.length ? "" : `<div class="muted small">沒有待通過</div>`;
 
   pending.forEach((p)=>{
@@ -203,11 +236,13 @@ function renderPending(){
 
 function renderSongs(){
   const grid=$("songGrid");
-  const q=($("songSearch").value||"").trim().toLowerCase();
+  if (!grid) return;
+
+  const q=($("songSearch")?.value||"").trim().toLowerCase();
 
   let list=filterSongsByCategory(songs);
 
-  // ✅ 依播放次數排序：多的在上
+  // 播放次數多的在上
   list.sort((a,b)=>(b.plays||0)-(a.plays||0));
 
   if(q){
@@ -239,6 +274,8 @@ function renderSongs(){
 
 function renderLeaderboard(){
   const box=$("leaderboardList");
+  if (!box) return;
+
   box.innerHTML="";
 
   const sorted=[...songs].sort((a,b)=>(b.plays||0)-(a.plays||0)).slice(0,60);
@@ -264,6 +301,8 @@ function renderLeaderboard(){
 
 function renderWishlist(){
   const box=$("wishList");
+  if (!box) return;
+
   box.innerHTML = wishlist.length ? "" : `<div class="muted small">還沒有許願</div>`;
 
   wishlist.forEach(w=>{
@@ -287,7 +326,10 @@ function renderWishlist(){
 
 async function sync(){
   if(!authed) return;
-  $("syncStatus").textContent="同步中…";
+
+  const status = $("syncStatus");
+  if (status) status.textContent="同步中…";
+
   try{
     const [s1,s2,s3,s4] = await Promise.all([
       api("songs"),
@@ -308,8 +350,8 @@ async function sync(){
     renderLeaderboard();
     renderWishlist();
 
-    $("syncStatus").textContent="已同步："+new Date().toLocaleTimeString();
+    if (status) status.textContent="已同步："+new Date().toLocaleTimeString();
   } catch (e) {
-    $("syncStatus").textContent = "同步失敗：" + (e && e.message ? e.message : String(e));
+    if (status) status.textContent = "同步失敗：" + (e && e.message ? e.message : String(e));
   }
 }

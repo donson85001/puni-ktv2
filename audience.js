@@ -1,186 +1,369 @@
-const MAIN = ["女歌手","男歌手","其他"];
-const OTHER = ["日","英","韓","RAP","嗨歌","對唱"];
+/* ===== 狀態 ===== */
+
 let songs = [];
 let queue = [];
 let wishlist = [];
-let cat = "全部";
 
-const $ = (id)=>document.getElementById(id);
+const MAIN_CATS = ["女歌手","男歌手","其他"];
+const OTHER_SUBTAGS = ["日","英","韓","Rap","情歌對唱","嗨歌/怪歌","舞蹈"];
 
-init();
+let mainCat = "女歌手";
+let subCat = "全部";
+
+/* ===== 工具 ===== */
+
+function esc(s){
+  return String(s||"").replace(/[&<>"]/g,a=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;"
+  }[a]));
+}
+
+function toast(msg){
+  console.log(msg);
+}
+
+/* ===== 初始化 ===== */
 
 function init(){
+
+  /* sidebar 切頁 */
   document.querySelectorAll(".nav").forEach(btn=>{
     btn.onclick=()=>{
       document.querySelectorAll(".nav").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
-      show(btn.dataset.page);
+
+      const p=btn.dataset.page;
+      document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));
+      document.getElementById("page-"+p).classList.remove("hidden");
     };
   });
 
-  $("songSearchBtn").onclick=()=>renderSongs($("songSearch").value.trim());
-  $("songSearch").addEventListener("keydown", e=>{ if(e.key==="Enter") renderSongs(e.target.value.trim()); });
+  /* 搜尋 */
+  document.getElementById("songSearchBtn").onclick=renderSongs;
+  document.getElementById("songSearch").oninput=renderSongs;
 
-  $("toggleCats").onclick=()=>{
-    const p=$("catPanel");
-    p.style.display = (p.style.display==="none" ? "block" : "none");
+  /* 顯示/隱藏分類 */
+  document.getElementById("toggleCats").onclick=()=>{
+    const p=document.getElementById("catPanel");
+    p.style.display=p.style.display==="none"?"block":"none";
   };
 
-  $("wishBtn").onclick=submitWish;
+  /* 許願 */
+  document.getElementById("wishBtn").onclick=sendWish;
 
-  buildCatChips();
+  injectMainCatButtons();
 
-  show("home");
-  sync(true);
-  setInterval(()=>sync(false), 5000);
+  sync();
+
+  setInterval(sync,5000);
 }
 
-function show(name){
-  document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
-  $("page-"+name).classList.remove("hidden");
-  if(name==="songs") $("catPanel").style.display="block";
-}
+/* ===== 大分類按鈕 ===== */
 
-function buildCatChips(){
-  const box=$("catChips");
-  box.innerHTML="";
-  ["全部",...MAIN,...OTHER].forEach(c=>{
+function injectMainCatButtons(){
+
+  const panel=document.getElementById("catPanel");
+
+  const old=panel.querySelector(".maincats");
+  if(old) old.remove();
+
+  const wrap=document.createElement("div");
+  wrap.className="maincats";
+  wrap.style.marginBottom="10px";
+
+  MAIN_CATS.forEach(c=>{
     const b=document.createElement("button");
-    b.className="chip " + (c===cat ? "chip-active":"");
+    b.className="chip "+(c===mainCat?"chip-active":"");
     b.textContent=c;
-    b.onclick=()=>{ cat=c; buildCatChips(); renderAll(); };
-    box.appendChild(b);
-  });
-}
 
-function applyCat(list){
-  if(cat==="全部") return list;
-  if(MAIN.includes(cat)) return list.filter(s=>s.category===cat);
-  if(OTHER.includes(cat)) return list.filter(s=>s.category===cat);
-  return list;
-}
-
-async function sync(force){
-  $("syncStatus").textContent="同步中…";
-  try{
-    const [s1,s2,s3] = await Promise.all([
-      api("songs"),
-      api("queue"),
-      api("wishlist"),
-    ]);
-    songs = (s1.data||s1||[]);
-    queue = (s2.data||s2||[]);
-    wishlist = (s3.data||s3||[]);
-    $("syncStatus").textContent="已同步：" + new Date().toLocaleTimeString();
-    renderAll();
-  }catch(e){
-    $("syncStatus").textContent="同步失敗";
-  }
-}
-
-function renderAll(){
-  renderHomeQueue();
-  renderSongs($("songSearch")?.value?.trim()||"");
-  renderLeaderboard();
-  renderWishlist();
-}
-
-function renderHomeQueue(){
-  const box=$("homeQueue");
-  box.innerHTML = queue.length ? "" : `<div class="muted small">Queue 是空的</div>`;
-  queue.slice(0,10).forEach((q,idx)=>{
-    const el=document.createElement("div");
-    el.className="row";
-    el.innerHTML=`
-      <div class="row-left">
-        <div class="row-title"><span class="rank">${idx+1}</span> ${esc(q.title||"")}${q.practice?" ⭐":""}</div>
-        <div class="row-sub">${esc(q.artist||"")}</div>
-      </div>
-      <div class="row-actions"><span class="pill">Queue</span></div>
-    `;
-    box.appendChild(el);
-  });
-}
-
-function renderSongs(query){
-  const grid=$("songGrid");
-  const q=(query||"").toLowerCase();
-  let list = applyCat(songs);
-  if(q) list = list.filter(s=>String(s.title||"").toLowerCase().includes(q) || String(s.artist||"").toLowerCase().includes(q));
-  grid.innerHTML = list.length ? "" : `<div class="muted small">沒有歌曲</div>`;
-  list.forEach(s=>grid.appendChild(songCard(s)));
-}
-
-function songCard(s){
-  const el=document.createElement("div");
-  el.className="song";
-  el.innerHTML=`
-    <div class="song-title">${esc(s.title||"")}${s.practice?` <span class="badge">⭐ 練習中</span>`:""}</div>
-    <div class="song-artist">${esc(s.artist||"")} · <span class="muted">${esc(s.category||"")}</span></div>
-    <div class="song-actions">
-      <button class="btn btn-mini btn-primary">點歌</button>
-      <span class="pill">播放 ${Number(s.plays||0)}</span>
-    </div>
-  `;
-  el.querySelector("button").onclick = async ()=>{
-    // 觀眾：進 pending（主播再決定）
-    await api("suggest", { songId: s.id, by: "viewer" });
-    toast("已送出點歌（待主播確認）");
-  };
-  return el;
-}
-
-async function renderLeaderboard(){
-  const box=$("leaderboardList");
-  const data = await api("leaderboard").catch(()=>({data:[]}));
-  const list = (data.data||data||[]).slice(0,50);
-
-  box.innerHTML = list.length ? "" : `<div class="muted small">沒有資料</div>`;
-  list.forEach((s,idx)=>{
-    const row=document.createElement("div");
-    row.className="row";
-    row.innerHTML=`
-      <div class="row-left">
-        <div class="row-title"><span class="rank">${idx+1}</span> ${esc(s.title||"")}${s.practice?" ⭐":""} <span class="pill">${esc(s.category||"")}</span></div>
-        <div class="row-sub">${esc(s.artist||"")}</div>
-      </div>
-      <div class="row-actions">
-        <span class="muted small">${Number(s.plays||0)} 次</span>
-        <button class="btn btn-mini btn-primary">點歌</button>
-      </div>
-    `;
-    row.querySelector("button").onclick = async ()=>{
-      await api("suggest", { songId: s.id, by: "viewer" });
-      toast("已送出點歌（待主播確認）");
+    b.onclick=()=>{
+      mainCat=c;
+      subCat="全部";
+      injectMainCatButtons();
+      rebuildSubtagChips();
+      renderSongs();
     };
-    box.appendChild(row);
+
+    wrap.appendChild(b);
+  });
+
+  panel.prepend(wrap);
+}
+
+/* ===== 子分類 ===== */
+
+function buildSingerSubtags(allSongs,category){
+
+  const list=allSongs.filter(s=>s.category===category);
+
+  const count={};
+
+  for(const s of list){
+    const a=(s.artist||"").trim();
+    if(!a) continue;
+    count[a]=(count[a]||0)+1;
+  }
+
+  const multi=Object.keys(count)
+    .filter(a=>count[a]>=2)
+    .sort((a,b)=>a.localeCompare(b,"zh-Hant"));
+
+  return [...multi,"其他(單曲歌手)"];
+}
+
+function rebuildSubtagChips(){
+
+  const box=document.getElementById("catChips");
+  box.innerHTML="";
+
+  let subtags=[];
+
+  if(mainCat==="女歌手"||mainCat==="男歌手")
+    subtags=buildSingerSubtags(songs,mainCat);
+
+  if(mainCat==="其他")
+    subtags=OTHER_SUBTAGS;
+
+  const all=["全部",...subtags];
+
+  all.forEach(t=>{
+
+    const b=document.createElement("button");
+    b.className="chip "+(t===subCat?"chip-active":"");
+    b.textContent=t;
+
+    b.onclick=()=>{
+      subCat=t;
+      rebuildSubtagChips();
+      renderSongs();
+    };
+
+    box.appendChild(b);
+
   });
 }
 
-async function submitWish(){
-  const name=$("wishName").value.trim() || "匿名";
-  const song=$("wishSong").value.trim();
-  if(!song) return;
-  await api("wish", { text: encodeWish(name, song) });
-  $("wishSong").value="";
-  toast("已送出許願");
-  await sync(true);
+/* ===== 分類過濾 ===== */
+
+function filterSongs(list){
+
+  let out=list.filter(s=>s.category===mainCat);
+
+  if(mainCat==="女歌手"||mainCat==="男歌手"){
+
+    if(subCat!=="全部"){
+
+      if(subCat==="其他(單曲歌手)"){
+
+        const cnt={};
+
+        for(const s of out){
+          const a=(s.artist||"").trim();
+          if(!a) continue;
+          cnt[a]=(cnt[a]||0)+1;
+        }
+
+        out=out.filter(s=>(cnt[(s.artist||"").trim()]||0)===1);
+
+      }else{
+
+        out=out.filter(s=>(s.artist||"").trim()===subCat);
+
+      }
+    }
+  }
+
+  if(mainCat==="其他"){
+
+    if(subCat!=="全部")
+      out=out.filter(s=>(s.subtag||"")===subCat);
+
+  }
+
+  return out;
 }
 
-function renderWishlist(){
-  const box=$("wishList");
-  box.innerHTML = wishlist.length ? "" : `<div class="muted small">還沒有許願</div>`;
-  wishlist.slice(0,50).forEach(w=>{
-    const {song} = decodeWish(w.text||"");
-    const row=document.createElement("div");
-    row.className="row";
-    row.innerHTML=`
-      <div class="row-left">
-        <div class="row-title">${esc(song)}</div>
-        <div class="row-sub">${new Date(Number(w.ts||0)).toLocaleString()}</div>
+/* ===== 畫歌曲 ===== */
+
+function renderSongs(){
+
+  const grid=document.getElementById("songGrid");
+
+  const q=(document.getElementById("songSearch").value||"")
+  .toLowerCase();
+
+  let list=filterSongs(songs);
+
+  if(q){
+
+    list=list.filter(s=>
+      (s.title||"").toLowerCase().includes(q) ||
+      (s.artist||"").toLowerCase().includes(q)
+    );
+
+  }
+
+  grid.innerHTML="";
+
+  if(!list.length){
+    grid.innerHTML=`<div class="muted small">沒有歌曲</div>`;
+    return;
+  }
+
+  list.forEach(s=>{
+
+    const el=document.createElement("div");
+    el.className="song";
+
+    el.innerHTML=`
+      <div class="song-title">
+        ${esc(s.title)}
+        ${s.practice?` ⭐`:``}
       </div>
-      <div class="row-actions"><span class="pill">Wish</span></div>
+
+      <div class="song-artist">
+        ${mainCat==="其他"
+          ? esc(s.subtag||"")
+          : esc(s.artist||"")}
+      </div>
+
+      <button class="btn btn-primary btn-mini">
+        點歌
+      </button>
     `;
-    box.appendChild(row);
+
+    el.querySelector("button").onclick=async()=>{
+      await api("suggest",{songId:s.id,by:"viewer"});
+      toast("已送出點歌");
+    };
+
+    grid.appendChild(el);
+
   });
 }
+
+/* ===== 排行榜 ===== */
+
+function renderLeaderboard(){
+
+  const box=document.getElementById("leaderboardList");
+  box.innerHTML="";
+
+  const sorted=[...songs]
+  .sort((a,b)=>(b.plays||0)-(a.plays||0))
+  .slice(0,50);
+
+  sorted.forEach((s,i)=>{
+
+    const el=document.createElement("div");
+    el.className="list-item";
+
+    el.innerHTML=`
+      <span class="rank">${i+1}</span>
+      ${esc(s.title)} - ${esc(s.artist)}
+      <span class="muted">(${s.plays||0})</span>
+      <button class="btn btn-mini btn-primary">點歌</button>
+    `;
+
+    el.querySelector("button").onclick=async()=>{
+      await api("suggest",{songId:s.id,by:"viewer"});
+      toast("已送出點歌");
+    };
+
+    box.appendChild(el);
+
+  });
+}
+
+/* ===== 播放清單 ===== */
+
+function renderQueue(){
+
+  const box=document.getElementById("homeQueue");
+  box.innerHTML="";
+
+  queue.forEach((q,i)=>{
+
+    const el=document.createElement("div");
+    el.className="list-item";
+
+    el.innerHTML=`
+      <span class="rank">${i+1}</span>
+      ${esc(q.title)}
+    `;
+
+    box.appendChild(el);
+
+  });
+}
+
+/* ===== 許願池 ===== */
+
+async function sendWish(){
+
+  const name=document.getElementById("wishName").value.trim()||"匿名";
+  const song=document.getElementById("wishSong").value.trim();
+
+  if(!song) return;
+
+  await api("wish",{text:name+"|||"+song});
+
+  document.getElementById("wishSong").value="";
+
+}
+
+function renderWish(){
+
+  const box=document.getElementById("wishList");
+  box.innerHTML="";
+
+  wishlist.forEach(w=>{
+
+    const raw=w.text||"";
+    const song=raw.includes("|||") ? raw.split("|||")[1] : raw;
+
+    const el=document.createElement("div");
+    el.className="list-item";
+
+    el.textContent=song;
+
+    box.appendChild(el);
+
+  });
+}
+
+/* ===== 同步 ===== */
+
+async function sync(){
+
+  try{
+
+    const s1=await api("songs");
+    songs=s1.data||s1||[];
+
+    const s2=await api("queue");
+    queue=s2.data||s2||[];
+
+    const s3=await api("wishlist");
+    wishlist=s3.data||s3||[];
+
+    rebuildSubtagChips();
+    renderSongs();
+    renderLeaderboard();
+    renderQueue();
+    renderWish();
+
+    document.getElementById("syncStatus").textContent="同步成功";
+
+  }catch(e){
+
+    document.getElementById("syncStatus").textContent="同步失敗";
+
+  }
+
+}
+
+init();

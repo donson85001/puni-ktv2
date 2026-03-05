@@ -309,7 +309,7 @@ async function sync(){
     renderWishlist();
 
     $("syncStatus").textContent="已同步："+new Date().toLocaleTimeString();
-  }catch(e){
-    $("syncStatus").textContent="同步失敗";
+  } catch (e) {
+    $("syncStatus").textContent = "同步失敗：" + (e && e.message ? e.message : String(e));
   }
 }

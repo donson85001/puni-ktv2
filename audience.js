@@ -202,7 +202,7 @@ function renderLeaderboard() {
       </div>
     `;
     row.querySelector("button").onclick = async () => {
-      await api("addqueue", { songId: s.id });
+      await api("addqueue", { songId: s.id, by: "觀眾" });
       toast("已送出點歌（待主播通過）");
     };
     box.appendChild(row);

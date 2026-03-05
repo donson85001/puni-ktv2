@@ -6,10 +6,6 @@
   <title>噗妮KTV OBS</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* ✅ IMPORTANT:
-       All OBS-specific styles are scoped under .obs-root
-       so they will NOT override other pages' styles.
-    */
     .obs-root{
       height:100vh;
       width:100vw;
@@ -17,10 +13,9 @@
       padding: 10px;
       box-sizing: border-box;
     }
-
     .obs-card{
       height:100%;
-      width: min(360px, 100%); /* ✅ 瘦一點 */
+      width: min(360px, 100%);
       border:1px solid var(--line);
       border-radius: 14px;
       background: rgba(12,12,20,.70);
@@ -29,14 +24,12 @@
       display:flex;
       flex-direction:column;
     }
-
     .obs-head{
       padding:10px 12px;
       border-bottom:1px solid var(--line);
       font-weight:900;
       letter-spacing:.5px;
     }
-
     .obs-list{
       padding:10px 10px 12px;
       overflow:auto;
@@ -44,17 +37,14 @@
       flex-direction:column;
       gap:8px;
     }
-
     .obs-item{
       border:1px solid var(--line);
       border-radius: 12px;
       padding:10px 10px;
       background: rgba(0,0,0,.18);
     }
-
     .obs-title{font-weight:900}
     .obs-sub{margin-top:4px;color:var(--muted);font-size:12px}
-
     .obs-rank{
       display:inline-flex;
       width:22px;height:22px;
@@ -65,7 +55,6 @@
       color:var(--muted);
       font-size:12px;
     }
-
     .obs-pill{
       display:inline-block;
       margin-left:8px;
@@ -107,6 +96,7 @@
         }else{
           el.innerHTML = list.map((x,i)=>`
             <div class="obs-item">
+              <div class="obs-sub">🎯 ${esc(x.by || "")}</div>
               <div class="obs-title">
                 <span class="obs-rank">${i+1}</span>${esc(x.title||"")}${x.practice?" ⭐":""}
                 <span class="obs-pill">${esc(x.category||"")}</span>

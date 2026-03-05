@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>噗妮KTV｜主播</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="login" class="container">
+  <h2>主播登入</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <input id="pw" placeholder="密碼（後端驗證）">
+    <button onclick="verify()">登入</button>
+  </div>
+</div>
+
+<div id="panel" class="container" style="display:none">
+  <h2>播放清單</h2>
+  <div id="queue"></div>
+
+  <h2>許願池（顯示許願者）</h2>
+  <div id="wishlist"></div>
+</div>
+
+<script src="common.js"></script>
+<script src="streamer.js"></script>
+</body>
+</html>

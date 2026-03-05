@@ -1,0 +1,9 @@
+
+body{font-family:Arial,Helvetica,sans-serif;background:#0f0f18;color:#fff;margin:0}
+header{padding:16px;background:#141426;border-bottom:1px solid #333}
+.container{max-width:1100px;margin:auto;padding:20px}
+button{padding:8px 12px;border-radius:8px;border:none;background:#9146FF;color:#fff;cursor:pointer}
+input{padding:8px;border-radius:8px;border:1px solid #333;background:#1a1a2a;color:#fff}
+.song{border:1px solid #333;border-radius:10px;padding:10px;margin:6px 0;background:#1a1a2a}
+.rank{font-weight:bold;margin-right:6px}
+.badge{color:#f6c343}

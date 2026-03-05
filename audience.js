@@ -1,369 +1,326 @@
-/* ===== 狀態 ===== */
+// audience.js (fix: category UX + leaderboard alignment)
+// Requires: common.js provides api(), esc(), toast()
 
 let songs = [];
 let queue = [];
 let wishlist = [];
 
-const MAIN_CATS = ["女歌手","男歌手","其他"];
-const OTHER_SUBTAGS = ["日","英","韓","Rap","情歌對唱","嗨歌/怪歌","舞蹈"];
+// 大分類只有三個
+const MAIN_CATS = ["女歌手", "男歌手", "其他"];
+// 其他底下固定子標籤
+const OTHER_SUBTAGS = ["日", "英", "韓", "Rap", "情歌對唱", "嗨歌/怪歌", "舞蹈"];
 
 let mainCat = "女歌手";
-let subCat = "全部";
+let subCat  = "全部";
 
-/* ===== 工具 ===== */
+const $ = (id) => document.getElementById(id);
 
-function esc(s){
-  return String(s||"").replace(/[&<>"]/g,a=>({
-    "&":"&amp;",
-    "<":"&lt;",
-    ">":"&gt;",
-    '"':"&quot;"
-  }[a]));
-}
+init();
 
-function toast(msg){
-  console.log(msg);
-}
-
-/* ===== 初始化 ===== */
-
-function init(){
-
-  /* sidebar 切頁 */
-  document.querySelectorAll(".nav").forEach(btn=>{
-    btn.onclick=()=>{
-      document.querySelectorAll(".nav").forEach(b=>b.classList.remove("active"));
+function init() {
+  // sidebar 切頁
+  document.querySelectorAll(".nav").forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll(".nav").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
-      const p=btn.dataset.page;
-      document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));
-      document.getElementById("page-"+p).classList.remove("hidden");
+      const p = btn.dataset.page;
+      document.querySelectorAll(".page").forEach((x) => x.classList.add("hidden"));
+      $("page-" + p).classList.remove("hidden");
+
+      // ✅ UX：進入點歌頁自動打開分類面板
+      if (p === "songs") {
+        $("catPanel").style.display = "block";
+      }
     };
   });
 
-  /* 搜尋 */
-  document.getElementById("songSearchBtn").onclick=renderSongs;
-  document.getElementById("songSearch").oninput=renderSongs;
+  // 搜尋
+  $("songSearchBtn").onclick = renderSongs;
+  $("songSearch").addEventListener("input", renderSongs);
+  $("songSearch").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") renderSongs();
+  });
 
-  /* 顯示/隱藏分類 */
-  document.getElementById("toggleCats").onclick=()=>{
-    const p=document.getElementById("catPanel");
-    p.style.display=p.style.display==="none"?"block":"none";
+  // 分類面板開關
+  $("toggleCats").onclick = () => {
+    const p = $("catPanel");
+    p.style.display = p.style.display === "none" ? "block" : "none";
   };
 
-  /* 許願 */
-  document.getElementById("wishBtn").onclick=sendWish;
+  // 許願
+  $("wishBtn").onclick = sendWish;
 
-  injectMainCatButtons();
+  // 初次注入大分類 chips（女/男/其他）
+  rebuildMainCatChips();
 
   sync();
-
-  setInterval(sync,5000);
+  setInterval(sync, 5000);
 }
 
-/* ===== 大分類按鈕 ===== */
+/* ===== 分類 chips ===== */
 
-function injectMainCatButtons(){
+function rebuildMainCatChips() {
+  // ✅ 直接把「大分類 chips」插在 catPanel 最上方
+  const panel = $("catPanel");
 
-  const panel=document.getElementById("catPanel");
+  let wrap = panel.querySelector("[data-maincats='1']");
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.dataset.maincats = "1";
+    wrap.className = "panel-body";
+    wrap.style.marginBottom = "10px";
+    panel.insertBefore(wrap, panel.firstChild);
+  }
+  wrap.innerHTML = "";
 
-  const old=panel.querySelector(".maincats");
-  if(old) old.remove();
-
-  const wrap=document.createElement("div");
-  wrap.className="maincats";
-  wrap.style.marginBottom="10px";
-
-  MAIN_CATS.forEach(c=>{
-    const b=document.createElement("button");
-    b.className="chip "+(c===mainCat?"chip-active":"");
-    b.textContent=c;
-
-    b.onclick=()=>{
-      mainCat=c;
-      subCat="全部";
-      injectMainCatButtons();
+  MAIN_CATS.forEach((c) => {
+    const b = document.createElement("button");
+    b.className = "chip " + (c === mainCat ? "chip-active" : "");
+    b.textContent = c;
+    b.onclick = () => {
+      mainCat = c;
+      subCat = "全部";
+      rebuildMainCatChips();
       rebuildSubtagChips();
       renderSongs();
     };
-
     wrap.appendChild(b);
   });
 
-  panel.prepend(wrap);
+  rebuildSubtagChips();
 }
 
-/* ===== 子分類 ===== */
+function buildSingerSubtags(allSongs, category) {
+  const list = allSongs.filter((s) => s.category === category);
 
-function buildSingerSubtags(allSongs,category){
-
-  const list=allSongs.filter(s=>s.category===category);
-
-  const count={};
-
-  for(const s of list){
-    const a=(s.artist||"").trim();
-    if(!a) continue;
-    count[a]=(count[a]||0)+1;
+  const count = {};
+  for (const s of list) {
+    const a = (s.artist || "").trim();
+    if (!a) continue;
+    count[a] = (count[a] || 0) + 1;
   }
 
-  const multi=Object.keys(count)
-    .filter(a=>count[a]>=2)
-    .sort((a,b)=>a.localeCompare(b,"zh-Hant"));
+  const multi = Object.keys(count)
+    .filter((a) => count[a] >= 2)
+    .sort((a, b) => a.localeCompare(b, "zh-Hant"));
 
-  return [...multi,"其他(單曲歌手)"];
+  return [...multi, "其他(單曲歌手)"];
 }
 
-function rebuildSubtagChips(){
+function rebuildSubtagChips() {
+  const box = $("catChips");
+  box.innerHTML = "";
 
-  const box=document.getElementById("catChips");
-  box.innerHTML="";
+  let subtags = [];
+  if (mainCat === "女歌手" || mainCat === "男歌手") {
+    subtags = buildSingerSubtags(songs, mainCat);
+  } else if (mainCat === "其他") {
+    subtags = OTHER_SUBTAGS;
+  }
 
-  let subtags=[];
+  const all = ["全部", ...subtags];
 
-  if(mainCat==="女歌手"||mainCat==="男歌手")
-    subtags=buildSingerSubtags(songs,mainCat);
-
-  if(mainCat==="其他")
-    subtags=OTHER_SUBTAGS;
-
-  const all=["全部",...subtags];
-
-  all.forEach(t=>{
-
-    const b=document.createElement("button");
-    b.className="chip "+(t===subCat?"chip-active":"");
-    b.textContent=t;
-
-    b.onclick=()=>{
-      subCat=t;
+  all.forEach((t) => {
+    const b = document.createElement("button");
+    b.className = "chip " + (t === subCat ? "chip-active" : "");
+    b.textContent = t;
+    b.onclick = () => {
+      subCat = t;
       rebuildSubtagChips();
       renderSongs();
     };
-
     box.appendChild(b);
-
   });
 }
 
-/* ===== 分類過濾 ===== */
+function filterSongsByCategory(allSongs) {
+  let list = allSongs.filter((s) => s.category === mainCat);
 
-function filterSongs(list){
-
-  let out=list.filter(s=>s.category===mainCat);
-
-  if(mainCat==="女歌手"||mainCat==="男歌手"){
-
-    if(subCat!=="全部"){
-
-      if(subCat==="其他(單曲歌手)"){
-
-        const cnt={};
-
-        for(const s of out){
-          const a=(s.artist||"").trim();
-          if(!a) continue;
-          cnt[a]=(cnt[a]||0)+1;
+  if (mainCat === "女歌手" || mainCat === "男歌手") {
+    if (subCat !== "全部") {
+      if (subCat === "其他(單曲歌手)") {
+        const cnt = {};
+        for (const s of list) {
+          const a = (s.artist || "").trim();
+          if (!a) continue;
+          cnt[a] = (cnt[a] || 0) + 1;
         }
-
-        out=out.filter(s=>(cnt[(s.artist||"").trim()]||0)===1);
-
-      }else{
-
-        out=out.filter(s=>(s.artist||"").trim()===subCat);
-
+        list = list.filter((s) => (cnt[(s.artist || "").trim()] || 0) === 1);
+      } else {
+        list = list.filter((s) => (s.artist || "").trim() === subCat);
       }
     }
   }
 
-  if(mainCat==="其他"){
-
-    if(subCat!=="全部")
-      out=out.filter(s=>(s.subtag||"")===subCat);
-
+  if (mainCat === "其他") {
+    if (subCat !== "全部") {
+      list = list.filter((s) => (s.subtag || "") === subCat);
+    }
   }
 
-  return out;
+  return list;
 }
 
-/* ===== 畫歌曲 ===== */
+/* ===== Render ===== */
 
-function renderSongs(){
+function renderSongs() {
+  const grid = $("songGrid");
+  const q = ($("songSearch").value || "").trim().toLowerCase();
 
-  const grid=document.getElementById("songGrid");
+  let list = filterSongsByCategory(songs);
 
-  const q=(document.getElementById("songSearch").value||"")
-  .toLowerCase();
-
-  let list=filterSongs(songs);
-
-  if(q){
-
-    list=list.filter(s=>
-      (s.title||"").toLowerCase().includes(q) ||
-      (s.artist||"").toLowerCase().includes(q)
+  if (q) {
+    list = list.filter(
+      (s) =>
+        String(s.title || "").toLowerCase().includes(q) ||
+        String(s.artist || "").toLowerCase().includes(q)
     );
-
   }
 
-  grid.innerHTML="";
+  grid.innerHTML = list.length ? "" : `<div class="muted small">沒有歌曲</div>`;
 
-  if(!list.length){
-    grid.innerHTML=`<div class="muted small">沒有歌曲</div>`;
+  list.forEach((s) => {
+    const el = document.createElement("div");
+    el.className = "song";
+    el.innerHTML = `
+      <div class="song-title">${esc(s.title || "")}${s.practice ? ` <span class="badge">⭐ 練習中</span>` : ""}</div>
+      <div class="song-artist">
+        ${
+          mainCat === "其他"
+            ? `<span class="muted">${esc(s.subtag || "")}</span>`
+            : esc(s.artist || "")
+        }
+      </div>
+      <div class="song-actions">
+        <button class="btn btn-mini btn-primary">點歌</button>
+        <span class="pill">播放 <span class="plays">${Number(s.plays || 0)}</span></span>
+      </div>
+    `;
+    el.querySelector("button").onclick = async () => {
+      await api("suggest", { songId: s.id, by: "viewer" });
+      toast("已送出點歌（待主播確認）");
+    };
+    grid.appendChild(el);
+  });
+}
+
+function renderLeaderboard() {
+  const box = $("leaderboardList");
+  box.innerHTML = "";
+
+  const sorted = [...songs]
+    .sort((a, b) => (b.plays || 0) - (a.plays || 0))
+    .slice(0, 50);
+
+  if (!sorted.length) {
+    box.innerHTML = `<div class="muted small">沒有資料</div>`;
     return;
   }
 
-  list.forEach(s=>{
-
-    const el=document.createElement("div");
-    el.className="song";
-
-    el.innerHTML=`
-      <div class="song-title">
-        ${esc(s.title)}
-        ${s.practice?` ⭐`:``}
+  sorted.forEach((s, idx) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="row-left">
+        <div class="row-title">
+          <span class="rank">${idx + 1}</span>
+          ${esc(s.title || "")}${s.practice ? " ⭐" : ""}
+          <span class="pill">${esc(s.category || "")}</span>
+        </div>
+        <div class="row-sub">${esc(s.artist || "")}</div>
       </div>
-
-      <div class="song-artist">
-        ${mainCat==="其他"
-          ? esc(s.subtag||"")
-          : esc(s.artist||"")}
+      <div class="row-actions">
+        <span class="plays-box"><span class="plays">${Number(s.plays || 0)}</span></span>
+        <button class="btn btn-mini btn-primary">點歌</button>
       </div>
-
-      <button class="btn btn-primary btn-mini">
-        點歌
-      </button>
     `;
-
-    el.querySelector("button").onclick=async()=>{
-      await api("suggest",{songId:s.id,by:"viewer"});
-      toast("已送出點歌");
+    row.querySelector("button").onclick = async () => {
+      await api("suggest", { songId: s.id, by: "viewer" });
+      toast("已送出點歌（待主播確認）");
     };
-
-    grid.appendChild(el);
-
+    box.appendChild(row);
   });
 }
 
-/* ===== 排行榜 ===== */
+function renderHomeQueue() {
+  const box = $("homeQueue");
+  box.innerHTML = "";
 
-function renderLeaderboard(){
-
-  const box=document.getElementById("leaderboardList");
-  box.innerHTML="";
-
-  const sorted=[...songs]
-  .sort((a,b)=>(b.plays||0)-(a.plays||0))
-  .slice(0,50);
-
-  sorted.forEach((s,i)=>{
-
-    const el=document.createElement("div");
-    el.className="list-item";
-
-    el.innerHTML=`
-      <span class="rank">${i+1}</span>
-      ${esc(s.title)} - ${esc(s.artist)}
-      <span class="muted">(${s.plays||0})</span>
-      <button class="btn btn-mini btn-primary">點歌</button>
-    `;
-
-    el.querySelector("button").onclick=async()=>{
-      await api("suggest",{songId:s.id,by:"viewer"});
-      toast("已送出點歌");
-    };
-
-    box.appendChild(el);
-
-  });
-}
-
-/* ===== 播放清單 ===== */
-
-function renderQueue(){
-
-  const box=document.getElementById("homeQueue");
-  box.innerHTML="";
-
-  queue.forEach((q,i)=>{
-
-    const el=document.createElement("div");
-    el.className="list-item";
-
-    el.innerHTML=`
-      <span class="rank">${i+1}</span>
-      ${esc(q.title)}
-    `;
-
-    box.appendChild(el);
-
-  });
-}
-
-/* ===== 許願池 ===== */
-
-async function sendWish(){
-
-  const name=document.getElementById("wishName").value.trim()||"匿名";
-  const song=document.getElementById("wishSong").value.trim();
-
-  if(!song) return;
-
-  await api("wish",{text:name+"|||"+song});
-
-  document.getElementById("wishSong").value="";
-
-}
-
-function renderWish(){
-
-  const box=document.getElementById("wishList");
-  box.innerHTML="";
-
-  wishlist.forEach(w=>{
-
-    const raw=w.text||"";
-    const song=raw.includes("|||") ? raw.split("|||")[1] : raw;
-
-    const el=document.createElement("div");
-    el.className="list-item";
-
-    el.textContent=song;
-
-    box.appendChild(el);
-
-  });
-}
-
-/* ===== 同步 ===== */
-
-async function sync(){
-
-  try{
-
-    const s1=await api("songs");
-    songs=s1.data||s1||[];
-
-    const s2=await api("queue");
-    queue=s2.data||s2||[];
-
-    const s3=await api("wishlist");
-    wishlist=s3.data||s3||[];
-
-    rebuildSubtagChips();
-    renderSongs();
-    renderLeaderboard();
-    renderQueue();
-    renderWish();
-
-    document.getElementById("syncStatus").textContent="同步成功";
-
-  }catch(e){
-
-    document.getElementById("syncStatus").textContent="同步失敗";
-
+  if (!queue.length) {
+    box.innerHTML = `<div class="muted small">Queue 是空的</div>`;
+    return;
   }
 
+  queue.slice(0, 10).forEach((q, idx) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="row-left">
+        <div class="row-title"><span class="rank">${idx + 1}</span> ${esc(q.title || "")}${q.practice ? " ⭐" : ""}</div>
+        <div class="row-sub">${esc(q.artist || "")}</div>
+      </div>
+      <div class="row-actions"><span class="pill">Queue</span></div>
+    `;
+    box.appendChild(row);
+  });
 }
 
-init();
+function renderWishlist() {
+  const box = $("wishList");
+  box.innerHTML = "";
+
+  if (!wishlist.length) {
+    box.innerHTML = `<div class="muted small">還沒有許願</div>`;
+    return;
+  }
+
+  wishlist.slice(0, 50).forEach((w) => {
+    const raw = String(w.text || "");
+    const song = raw.includes("|||") ? raw.split("|||").slice(1).join("|||").trim() : raw.trim();
+
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="row-left">
+        <div class="row-title">${esc(song)}</div>
+        <div class="row-sub">${new Date(Number(w.ts || 0)).toLocaleString()}</div>
+      </div>
+      <div class="row-actions"><span class="pill">Wish</span></div>
+    `;
+    box.appendChild(row);
+  });
+}
+
+async function sendWish() {
+  const name = ($("wishName").value || "").trim() || "匿名";
+  const song = ($("wishSong").value || "").trim();
+  if (!song) return;
+
+  await api("wish", { text: `${name}|||${song}` });
+  $("wishSong").value = "";
+  toast("已送出許願");
+  await sync();
+}
+
+/* ===== Sync ===== */
+
+async function sync() {
+  $("syncStatus").textContent = "同步中…";
+  try {
+    const [s1, s2, s3] = await Promise.all([api("songs"), api("queue"), api("wishlist")]);
+    songs = s1.data || s1 || [];
+    queue = s2.data || s2 || [];
+    wishlist = s3.data || s3 || [];
+
+    rebuildMainCatChips();
+    renderSongs();
+    renderLeaderboard();
+    renderHomeQueue();
+    renderWishlist();
+
+    $("syncStatus").textContent = "已同步：" + new Date().toLocaleTimeString();
+  } catch (e) {
+    $("syncStatus").textContent = "同步失敗";
+  }
+}

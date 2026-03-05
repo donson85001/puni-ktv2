@@ -1,31 +1,26 @@
-// streamer.js (FAST + not laggy)
-// - Fast poll: queue + pending (every 2500ms)
-// - Slow poll: songs + wishlist (every 25000ms)
-// - No overlapping fetch (locks)
-// - Render ONLY current page
-// - Pending shows who requested (by)
-// - Wishlist can delete (deletewish)
+// streamer.js (Queue only, fast on mobile)
+// - NO pending anymore
+// - Fast sync: queue every 2000ms
+// - Slow sync: songs + wishlist every 25000ms
+// - Leaderboard rendered in song-card style (same as 點歌)
 
 let authed = false;
 let currentPage = "queue";
 
 let songs = [];
 let queue = [];
-let pending = [];
 let wishlist = [];
 
 const MAIN_CATS = ["女歌手","男歌手","其他"];
 const OTHER_SUBTAGS = ["日","英","韓","Rap","情歌對唱","嗨歌/怪歌","舞蹈"];
-let mainCat = "女歌手";
-let subCat  = "全部";
 
-const FAST_MS = 2500;   // ✅ Queue/Pending 快速更新
-const SLOW_MS = 25000;  // ✅ Songs/Wishlist 慢速更新（避免卡）
+let mainCat = "女歌手";
+let subCat = "全部";
+
+const FAST_MS = 2000;
+const SLOW_MS = 25000;
 
 const $ = (id) => document.getElementById(id);
-
-let fastTimer = null;
-let slowTimer = null;
 
 let syncingFast = false;
 let syncingSlow = false;
@@ -42,9 +37,7 @@ function init(){
       btn.classList.add("active");
       currentPage = btn.dataset.page;
       show(currentPage);
-
-      if(currentPage==="songs" && $("catPanel")) $("catPanel").style.display="block";
-      renderCurrentPage(); // ✅ 切頁只畫當前頁
+      renderCurrentPage();
     });
   });
 
@@ -59,22 +52,15 @@ function init(){
 
   const obsUrl = $("obsUrl");
   if (obsUrl) {
-    obsUrl.textContent = location.href.replace(/streamer\.html(\?.*)?$/i, "obs.html") + "?limit=10&transparent=1&title=1";
+    obsUrl.textContent = location.href.replace(/streamer\.html(\?.*)?$/i, "obs.html") + "?full=1";
   }
 }
 
-function setStatus(text){
-  const el = $("syncStatus");
-  if(el) el.textContent = text;
-}
-
 function debounce(fn, ms){
-  let t = null;
-  return (...args)=>{
-    clearTimeout(t);
-    t = setTimeout(()=>fn(...args), ms);
-  };
+  let t=null;
+  return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
 }
+function setStatus(t){ $("syncStatus") && ($("syncStatus").textContent=t); }
 
 async function login(){
   const pw = ($("pw")?.value||"").trim();
@@ -82,10 +68,7 @@ async function login(){
 
   try{
     const r = await api("verify",{password:pw},{timeoutMs:10000,retries:1});
-    if(!r.ok){
-      gateMsg && (gateMsg.textContent="密碼錯誤或後端未部署成功");
-      return;
-    }
+    if(!r.ok){ gateMsg && (gateMsg.textContent="密碼錯誤或後端未部署成功"); return; }
   }catch(e){
     gateMsg && (gateMsg.textContent="登入失敗：" + (e?.message||String(e)));
     return;
@@ -97,15 +80,14 @@ async function login(){
 
   rebuildMainCatChips();
 
-  // 先做一次完整同步
+  // first sync
   setStatus("同步中…");
   await syncSlow(true);
   await syncFast(true);
   setStatus("已同步：" + new Date().toLocaleTimeString());
 
-  // 開始兩種 timer
-  fastTimer = setInterval(()=>syncFast(false), FAST_MS);
-  slowTimer = setInterval(()=>syncSlow(false), SLOW_MS);
+  setInterval(()=>syncFast(false), FAST_MS);
+  setInterval(()=>syncSlow(false), SLOW_MS);
 
   currentPage = "queue";
   show("queue");
@@ -117,7 +99,15 @@ function show(name){
   $("page-"+name)?.classList.remove("hidden");
 }
 
-/* ===== 分類 chips ===== */
+function renderCurrentPage(){
+  if(!authed) return;
+  if(currentPage==="queue") return renderQueue();
+  if(currentPage==="songs") return renderSongs();
+  if(currentPage==="leaderboard") return renderLeaderboard();
+  if(currentPage==="wishlist") return renderWishlist();
+}
+
+/* ===== categories ===== */
 
 function rebuildMainCatChips(){
   const panel = $("catPanel");
@@ -176,11 +166,7 @@ function rebuildSubtagChips(){
     const b=document.createElement("button");
     b.className="chip "+(t===subCat?"chip-active":"");
     b.textContent=t;
-    b.onclick=()=>{
-      subCat=t;
-      rebuildSubtagChips();
-      renderSongs();
-    };
+    b.onclick=()=>{ subCat=t; rebuildSubtagChips(); renderSongs(); };
     box.appendChild(b);
   });
 }
@@ -205,37 +191,13 @@ function filterSongsByCategory(allSongs){
   }
 
   if(mainCat==="其他"){
-    if(subCat!=="全部"){
-      list = list.filter(s => (s.subtag||"")===subCat);
-    }
+    if(subCat!=="全部") list = list.filter(s => (s.subtag||"")===subCat);
   }
 
   return list;
 }
 
-/* ===== Render: only current page ===== */
-
-function renderCurrentPage(){
-  if(!authed) return;
-
-  if(currentPage==="queue"){
-    renderQueue();
-    renderPending();
-    return;
-  }
-  if(currentPage==="songs"){
-    renderSongs();
-    return;
-  }
-  if(currentPage==="leaderboard"){
-    renderLeaderboard();
-    return;
-  }
-  if(currentPage==="wishlist"){
-    renderWishlist();
-    return;
-  }
-}
+/* ===== render ===== */
 
 function renderQueue(){
   const box = $("queueList");
@@ -260,53 +222,18 @@ function renderQueue(){
         <button class="btn btn-mini">移除</button>
       </div>
     `;
+
     const btns=row.querySelectorAll("button");
     btns[0].onclick=async()=>{
       await api("played",{queueId:q.id},{timeoutMs:10000,retries:1});
-      await syncFast(true);  // ✅ 動作後只快同步
-      await syncSlow(true);  // ✅ songs 播放次數會變
+      await syncFast(true);
+      await syncSlow(false); // plays changed
     };
     btns[1].onclick=async()=>{
       await api("removequeue",{queueId:q.id},{timeoutMs:10000,retries:1});
       await syncFast(true);
     };
-    frag.appendChild(row);
-  });
 
-  box.replaceChildren(frag);
-}
-
-function renderPending(){
-  const box = $("pendingList");
-  if(!box) return;
-
-  if(!pending.length){
-    box.innerHTML = `<div class="muted small">沒有待通過</div>`;
-    return;
-  }
-
-  const frag = document.createDocumentFragment();
-  pending.forEach((p)=>{
-    const who = (p.by || "").trim(); // ✅ 顯示聊天室/觀眾是誰點的
-    const row=document.createElement("div");
-    row.className="row";
-    row.innerHTML=`
-      <div class="row-left">
-        <div class="row-title">${esc(p.title||"")}${p.practice?" ⭐":""} <span class="pill">${esc(p.category||"")}</span></div>
-        <div class="row-sub">
-          ${esc(p.artist || (p.category==="其他" ? (p.subtag||"") : ""))}
-          ${who ? " · 點歌者：" + esc(who) : ""}
-          · ${new Date(Number(p.ts||0)).toLocaleString()}
-        </div>
-      </div>
-      <div class="row-actions">
-        <button class="btn btn-mini btn-primary">通過</button>
-      </div>
-    `;
-    row.querySelector("button").onclick=async()=>{
-      await api("approve",{pendingId:p.id},{timeoutMs:10000,retries:1});
-      await syncFast(true);
-    };
     frag.appendChild(row);
   });
 
@@ -317,19 +244,17 @@ function renderSongs(){
   const grid=$("songGrid");
   if(!grid) return;
 
-  // ✅ 沒載入 songs 時不渲染，避免卡
   if(!songs.length){
-    grid.innerHTML = `<div class="muted small">歌曲尚未載入（等待背景同步…）</div>`;
+    grid.innerHTML = `<div class="muted small">歌曲載入中…</div>`;
     return;
   }
 
   const q=($("songSearch")?.value||"").trim().toLowerCase();
-
   let list = filterSongsByCategory(songs);
-  list.sort((a,b)=>(b.plays||0)-(a.plays||0)); // 播放次數多在上
+  list.sort((a,b)=>(b.plays||0)-(a.plays||0));
 
   if(q){
-    list = list.filter(s=>{
+    list=list.filter(s=>{
       const t=String(s.title||"").toLowerCase();
       const a=String(s.artist||"").toLowerCase();
       const st=String(s.subtag||"").toLowerCase();
@@ -337,16 +262,15 @@ function renderSongs(){
     });
   }
 
-  // ✅ 防止一次塞太多 DOM（可調）
-  const MAX = 200;
-  const shown = list.slice(0, MAX);
+  const MAX=250;
+  const shown=list.slice(0,MAX);
 
   if(!shown.length){
-    grid.innerHTML = `<div class="muted small">沒有歌曲</div>`;
+    grid.innerHTML=`<div class="muted small">沒有歌曲</div>`;
     return;
   }
 
-  const frag = document.createDocumentFragment();
+  const frag=document.createDocumentFragment();
   shown.forEach(s=>{
     const el=document.createElement("div");
     el.className="song";
@@ -364,17 +288,7 @@ function renderSongs(){
     };
     frag.appendChild(el);
   });
-
   grid.replaceChildren(frag);
-
-  // 顯示被截斷提示
-  if(list.length > MAX){
-    const tip = document.createElement("div");
-    tip.className = "muted small";
-    tip.style.marginTop = "10px";
-    tip.textContent = `（顯示前 ${MAX} 首；建議用搜尋縮小範圍）`;
-    grid.appendChild(tip);
-  }
 }
 
 function renderLeaderboard(){
@@ -386,20 +300,16 @@ function renderLeaderboard(){
     return;
   }
 
-  const sorted=[...songs].sort((a,b)=>(b.plays||0)-(a.plays||0)).slice(0,60);
-  if(!sorted.length){
-    box.innerHTML=`<div class="muted small">沒有資料</div>`;
-    return;
-  }
+  const sorted=[...songs].sort((a,b)=>(b.plays||0)-(a.plays||0)).slice(0,80);
 
-  const frag = document.createDocumentFragment();
+  const frag=document.createDocumentFragment();
   sorted.forEach((s,idx)=>{
     const row=document.createElement("div");
-    row.className="row";
+    row.className="row songlike";
     row.innerHTML=`
       <div class="row-left">
-        <div class="row-title"><span class="rank">${idx+1}</span> ${esc(s.title||"")}${s.practice?" ⭐":""} <span class="pill">${esc(s.category||"")}</span></div>
-        <div class="row-sub">${esc(s.artist || (s.category==="其他" ? (s.subtag||"") : ""))}</div>
+        <div class="row-title"><span class="rank">${idx+1}</span> ${esc(s.title||"")}${s.practice?" ⭐":""}</div>
+        <div class="row-sub">${esc(s.artist || (s.category==="其他" ? (s.subtag||"") : ""))} · <span class="pill">${esc(s.category||"")}</span></div>
       </div>
       <div class="row-actions">
         <span class="pill">播放 ${Number(s.plays||0)}</span>
@@ -425,7 +335,7 @@ function renderWishlist(){
     return;
   }
 
-  const frag = document.createDocumentFragment();
+  const frag=document.createDocumentFragment();
   wishlist.forEach(w=>{
     const raw=String(w.text||"");
     const name=raw.includes("|||") ? raw.split("|||")[0].trim() : "";
@@ -442,76 +352,54 @@ function renderWishlist(){
         <button class="btn btn-mini">刪除</button>
       </div>
     `;
-    row.querySelector("button").onclick = async ()=>{
+    row.querySelector("button").onclick=async()=>{
       await api("deletewish",{wishId:w.id},{timeoutMs:10000,retries:1});
-      await syncSlow(true); // wishlist 變了
+      await syncSlow(true);
     };
-
     frag.appendChild(row);
   });
 
   box.replaceChildren(frag);
 }
 
-/* ===== Sync split ===== */
+/* ===== sync ===== */
 
 async function syncFast(forceRender){
-  if(!authed) return;
-  if(syncingFast) return;
-  syncingFast = true;
-
+  if(!authed || syncingFast) return;
+  syncingFast=true;
   try{
-    const [q1,p1] = await Promise.all([
-      api("queue",null,{timeoutMs:10000,retries:1}),
-      api("pending",null,{timeoutMs:10000,retries:1}),
-    ]);
-
+    const q1 = await api("queue",null,{timeoutMs:10000,retries:1});
     queue = q1.data || [];
-    pending = p1.data || [];
-
-    if(forceRender || currentPage==="queue"){
-      renderQueue();
-      renderPending();
-    }
-
-    // 狀態文字只在沒 slow 同步時更新（避免跳動）
+    if(forceRender || currentPage==="queue") renderQueue();
     if(!syncingSlow) setStatus("已同步：" + new Date().toLocaleTimeString());
   }catch(e){
     setStatus("同步失敗：" + (e?.message||String(e)));
   }finally{
-    syncingFast = false;
+    syncingFast=false;
   }
 }
 
 async function syncSlow(forceRender){
-  if(!authed) return;
-  if(syncingSlow) return;
-  syncingSlow = true;
-
+  if(!authed || syncingSlow) return;
+  syncingSlow=true;
   try{
     const [s1,w1] = await Promise.all([
       api("songs",null,{timeoutMs:15000,retries:1}),
       api("wishlist",null,{timeoutMs:15000,retries:1}),
     ]);
-
     songs = s1.data || [];
     wishlist = w1.data || [];
 
-    // songs 變了要重建分類
     rebuildMainCatChips();
 
-    if(forceRender || currentPage==="songs" || currentPage==="leaderboard"){
-      if(currentPage==="songs") renderSongs();
-      if(currentPage==="leaderboard") renderLeaderboard();
-    }
-    if(forceRender || currentPage==="wishlist"){
-      if(currentPage==="wishlist") renderWishlist();
-    }
+    if(forceRender || currentPage==="songs") renderSongs();
+    if(forceRender || currentPage==="leaderboard") renderLeaderboard();
+    if(forceRender || currentPage==="wishlist") renderWishlist();
 
     setStatus("已同步：" + new Date().toLocaleTimeString());
   }catch(e){
     setStatus("同步失敗：" + (e?.message||String(e)));
   }finally{
-    syncingSlow = false;
+    syncingSlow=false;
   }
 }

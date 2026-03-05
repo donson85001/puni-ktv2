@@ -1,5 +1,5 @@
 // ✅ 改這一行成你的 Apps Script /exec
-const API = "PASTE_YOUR_SCRIPT_URL_HERE";
+const API = "https://script.google.com/macros/s/AKfycbycVWTwnVZKd3NtbOw4bD81WwpAiYF_tmCrGbkWF0Oi2aVkgfJKQM2FJVVnJEnaZWhQ/exec";
 
 function api(action, params = {}) {
   return new Promise((resolve, reject) => {

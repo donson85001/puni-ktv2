@@ -1,8 +1,8 @@
-// streamer.js (Queue only, fast on mobile)
-// - NO pending anymore
-// - Fast sync: queue every 2000ms
-// - Slow sync: songs + wishlist every 25000ms
-// - Leaderboard rendered in song-card style (same as 點歌)
+// streamer.js
+// - Login via backend verify
+// - Persist login via localStorage (no auto logout)
+// - Logout button clears localStorage and returns to gate
+// - Uses common.js api() + esc()
 
 let authed = false;
 let currentPage = "queue";
@@ -20,6 +20,8 @@ let subCat = "全部";
 const FAST_MS = 2000;
 const SLOW_MS = 25000;
 
+const LS_AUTH = "puni_streamer_authed"; // "1" = logged in
+
 const $ = (id) => document.getElementById(id);
 
 let syncingFast = false;
@@ -30,6 +32,7 @@ init();
 function init(){
   $("loginBtn")?.addEventListener("click", login);
   $("pw")?.addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
+  $("logoutBtn")?.addEventListener("click", logout);
 
   document.querySelectorAll(".nav").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
@@ -50,9 +53,15 @@ function init(){
     p.style.display = (p.style.display==="none" ? "block" : "none");
   });
 
+  // OBS URL
   const obsUrl = $("obsUrl");
   if (obsUrl) {
     obsUrl.textContent = location.href.replace(/streamer\.html(\?.*)?$/i, "obs.html") + "?full=1";
+  }
+
+  // ✅ Auto restore auth (no auto logout)
+  if(localStorage.getItem(LS_AUTH)==="1"){
+    enterApp_();
   }
 }
 
@@ -65,33 +74,73 @@ function setStatus(t){ $("syncStatus") && ($("syncStatus").textContent=t); }
 async function login(){
   const pw = ($("pw")?.value||"").trim();
   const gateMsg = $("gateMsg");
-
-  try{
-    const r = await api("verify",{password:pw},{timeoutMs:10000,retries:1});
-    if(!r.ok){ gateMsg && (gateMsg.textContent="密碼錯誤或後端未部署成功"); return; }
-  }catch(e){
-    gateMsg && (gateMsg.textContent="登入失敗：" + (e?.message||String(e)));
+  if(!pw){
+    gateMsg && (gateMsg.textContent="請輸入密碼");
     return;
   }
 
+  try{
+    setGateMsg_("登入中…");
+    // verify 走 common.js 的 api(action,payload)
+    const r = await api("verify",{password:pw},{timeoutMs:12000,retries:1});
+
+    if(!r || !r.ok){
+      setGateMsg_("登入失敗：密碼錯誤或後端未更新（請確認 common.js API 指向最新 /exec）");
+      return;
+    }
+
+    localStorage.setItem(LS_AUTH,"1");
+    enterApp_();
+  }catch(e){
+    setGateMsg_("登入失敗：" + (e?.message||String(e)));
+  }
+}
+
+function logout(){
+  localStorage.removeItem(LS_AUTH);
+  authed = false;
+
+  // stop syncing flags
+  syncingFast = false;
+  syncingSlow = false;
+
+  // back to gate
+  $("app") && ($("app").style.display="none");
+  $("gate") && ($("gate").style.display="grid");
+  $("pw") && ($("pw").value="");
+  setGateMsg_("已登出");
+}
+
+function setGateMsg_(t){
+  $("gateMsg") && ($("gateMsg").textContent = t);
+}
+
+function enterApp_(){
   authed = true;
+
   $("gate") && ($("gate").style.display="none");
   $("app") && ($("app").style.display="block");
 
   rebuildMainCatChips();
 
   // first sync
-  setStatus("同步中…");
-  await syncSlow(true);
-  await syncFast(true);
-  setStatus("已同步：" + new Date().toLocaleTimeString());
+  (async ()=>{
+    setStatus("同步中…");
+    await syncSlow(true);
+    await syncFast(true);
+    setStatus("已同步：" + new Date().toLocaleTimeString());
 
-  setInterval(()=>syncFast(false), FAST_MS);
-  setInterval(()=>syncSlow(false), SLOW_MS);
+    // start timers only once
+    if(!window.__puniStreamerTimers){
+      window.__puniStreamerTimers = true;
+      setInterval(()=>syncFast(false), FAST_MS);
+      setInterval(()=>syncSlow(false), SLOW_MS);
+    }
 
-  currentPage = "queue";
-  show("queue");
-  renderCurrentPage();
+    currentPage = "queue";
+    show("queue");
+    renderCurrentPage();
+  })();
 }
 
 function show(name){
@@ -210,12 +259,15 @@ function renderQueue(){
 
   const frag = document.createDocumentFragment();
   queue.forEach((q,idx)=>{
+    const who = q.by ? `🎯 ${q.by}` : "";
+    const subline = (q.artist || (q.category==="其他" ? (q.subtag||"") : "")).trim();
+
     const row=document.createElement("div");
     row.className="row";
     row.innerHTML=`
       <div class="row-left">
         <div class="row-title"><span class="rank">${idx+1}</span> ${esc(q.title||"")}${q.practice?" ⭐":""} <span class="pill">${esc(q.category||"")}</span></div>
-        <div class="row-sub">${esc(q.artist || (q.category==="其他" ? (q.subtag||"") : ""))}</div>
+        <div class="row-sub">${who}${who && subline ? " · " : ""}${esc(subline)}</div>
       </div>
       <div class="row-actions">
         <button class="btn btn-mini btn-primary">已唱 +1</button>
@@ -283,7 +335,7 @@ function renderSongs(){
       </div>
     `;
     el.querySelector("button").onclick=async()=>{
-      await await api("addqueue", { songId: s.id, by: "主播" }),{timeoutMs:10000,retries:1});
+      await api("addqueue",{songId:s.id, by:"主播"},{timeoutMs:10000,retries:1});
       await syncFast(true);
     };
     frag.appendChild(el);
@@ -317,7 +369,7 @@ function renderLeaderboard(){
       </div>
     `;
     row.querySelector("button").onclick=async()=>{
-      await api("addqueue", { songId: s.id, by: "主播" }),{timeoutMs:10000,retries:1});
+      await api("addqueue",{songId:s.id, by:"主播"},{timeoutMs:10000,retries:1});
       await syncFast(true);
     };
     frag.appendChild(row);

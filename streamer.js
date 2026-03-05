@@ -1,9 +1,5 @@
-// streamer.js (smooth version - less lag)
-// - Sync every 6s (configurable)
-// - No overlapping sync (lock)
-// - Render ONLY when data changed (hash)
-// - Render ONLY current page
-// - Force sync after actions (approve/addqueue/played/remove)
+// streamer.js (never stuck syncing)
+// Requires common.js api(), esc(), toast()
 
 let authed = false;
 let currentPage = "queue";
@@ -15,22 +11,12 @@ let wishlist = [];
 
 const MAIN_CATS = ["女歌手","男歌手","其他"];
 const OTHER_SUBTAGS = ["日","英","韓","Rap","情歌對唱","嗨歌/怪歌","舞蹈"];
-
 let mainCat = "女歌手";
-let subCat = "全部";
-
-const SYNC_MS = 6000; // ✅ 你嫌慢可改 4000；嫌卡就提高到 8000
+let subCat  = "全部";
 
 const $ = (id) => document.getElementById(id);
 
-let syncTimer = null;
 let syncing = false;
-
-// 用 hash 判斷資料是否變更（避免每次都重畫）
-let hashSongs = "";
-let hashQueue = "";
-let hashPending = "";
-let hashWishlist = "";
 
 init();
 
@@ -44,15 +30,12 @@ function init(){
       btn.classList.add("active");
       currentPage = btn.dataset.page;
       show(currentPage);
-
-      if(currentPage==="songs") $("catPanel") && ($("catPanel").style.display="block");
-      // ✅ 切頁時只渲染目前頁面
-      renderCurrentPage();
+      if(currentPage==="songs" && $("catPanel")) $("catPanel").style.display="block";
     });
   });
 
   $("songSearchBtn")?.addEventListener("click", renderSongs);
-  $("songSearch")?.addEventListener("input", debounce(renderSongs, 120));
+  $("songSearch")?.addEventListener("input", renderSongs);
 
   $("toggleCats")?.addEventListener("click", ()=>{
     const p = $("catPanel");
@@ -60,7 +43,6 @@ function init(){
     p.style.display = (p.style.display==="none" ? "block" : "none");
   });
 
-  // OBS URL（可有可無）
   const obsUrl = $("obsUrl");
   if (obsUrl) {
     obsUrl.textContent = location.href.replace(/streamer\.html(\?.*)?$/i, "obs.html") + "?limit=10&transparent=1&title=1";
@@ -71,10 +53,14 @@ async function login(){
   const pw = ($("pw")?.value||"").trim();
   const gateMsg = $("gateMsg");
 
-  // ✅ 先驗證
-  const r = await api("verify",{password:pw}).catch(()=>({ok:false}));
-  if(!r.ok){
-    if (gateMsg) gateMsg.textContent="密碼錯誤或後端未部署成功";
+  try{
+    const r = await api("verify",{password:pw},{timeoutMs:10000,retries:1});
+    if(!r.ok){
+      gateMsg && (gateMsg.textContent="密碼錯誤或後端未部署成功");
+      return;
+    }
+  }catch(e){
+    gateMsg && (gateMsg.textContent="登入失敗：" + (e?.message||String(e)));
     return;
   }
 
@@ -82,16 +68,13 @@ async function login(){
   $("gate") && ($("gate").style.display="none");
   $("app") && ($("app").style.display="block");
 
-  // 初次建分類
   rebuildMainCatChips();
 
-  // 初次同步 + 啟動定時同步
-  await sync(true);
-  syncTimer = setInterval(()=>sync(false), SYNC_MS);
+  await sync();
+  setInterval(sync, 5000);
 
-  currentPage = "queue";
+  currentPage="queue";
   show("queue");
-  renderCurrentPage();
 }
 
 function show(name){
@@ -99,38 +82,7 @@ function show(name){
   $("page-"+name)?.classList.remove("hidden");
 }
 
-/* ========= helpers ========= */
-
-function debounce(fn, ms){
-  let t = null;
-  return (...args)=>{
-    clearTimeout(t);
-    t = setTimeout(()=>fn(...args), ms);
-  };
-}
-
-function fastHash(obj){
-  // 快速 hash（足夠用來判斷「有沒有變」）
-  // 注意：後端回資料順序要穩定，否則會一直變
-  try{
-    const s = JSON.stringify(obj);
-    let h = 2166136261;
-    for(let i=0;i<s.length;i++){
-      h ^= s.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return String(h >>> 0);
-  }catch(e){
-    return String(Date.now());
-  }
-}
-
-function setStatus(text){
-  const el = $("syncStatus");
-  if(el) el.textContent = text;
-}
-
-/* ========= Category chips ========= */
+/* ===== 分類 ===== */
 
 function rebuildMainCatChips(){
   const panel = $("catPanel");
@@ -226,39 +178,13 @@ function filterSongsByCategory(allSongs){
   return list;
 }
 
-/* ========= Render (only current page) ========= */
-
-function renderCurrentPage(){
-  if(!authed) return;
-  if(currentPage==="queue"){
-    renderQueue();
-    renderPending();
-    return;
-  }
-  if(currentPage==="songs"){
-    renderSongs();
-    return;
-  }
-  if(currentPage==="leaderboard"){
-    renderLeaderboard();
-    return;
-  }
-  if(currentPage==="wishlist"){
-    renderWishlist();
-    return;
-  }
-}
+/* ===== Render ===== */
 
 function renderQueue(){
   const box = $("queueList");
   if(!box) return;
+  box.innerHTML = queue.length ? "" : `<div class="muted small">Queue 是空的</div>`;
 
-  if(!queue.length){
-    box.innerHTML = `<div class="muted small">Queue 是空的</div>`;
-    return;
-  }
-
-  const frag = document.createDocumentFragment();
   queue.forEach((q,idx)=>{
     const row=document.createElement("div");
     row.className="row";
@@ -272,35 +198,18 @@ function renderQueue(){
         <button class="btn btn-mini">移除</button>
       </div>
     `;
-
     const btns=row.querySelectorAll("button");
-    btns[0].onclick=async()=>{
-      await api("played",{queueId:q.id});
-      toast("已唱 +1");
-      await sync(true); // ✅ 動作後立刻同步
-    };
-    btns[1].onclick=async()=>{
-      await api("removequeue",{queueId:q.id});
-      toast("已移除");
-      await sync(true);
-    };
-
-    frag.appendChild(row);
+    btns[0].onclick=async()=>{ await api("played",{queueId:q.id}); await sync(); };
+    btns[1].onclick=async()=>{ await api("removequeue",{queueId:q.id}); await sync(); };
+    box.appendChild(row);
   });
-
-  box.replaceChildren(frag);
 }
 
 function renderPending(){
   const box = $("pendingList");
   if(!box) return;
+  box.innerHTML = pending.length ? "" : `<div class="muted small">沒有待通過</div>`;
 
-  if(!pending.length){
-    box.innerHTML = `<div class="muted small">沒有待通過</div>`;
-    return;
-  }
-
-  const frag = document.createDocumentFragment();
   pending.forEach((p)=>{
     const row=document.createElement("div");
     row.className="row";
@@ -313,15 +222,9 @@ function renderPending(){
         <button class="btn btn-mini btn-primary">通過</button>
       </div>
     `;
-    row.querySelector("button").onclick=async()=>{
-      await api("approve",{pendingId:p.id});
-      toast("已通過");
-      await sync(true);
-    };
-    frag.appendChild(row);
+    row.querySelector("button").onclick=async()=>{ await api("approve",{pendingId:p.id}); await sync(); };
+    box.appendChild(row);
   });
-
-  box.replaceChildren(frag);
 }
 
 function renderSongs(){
@@ -329,14 +232,12 @@ function renderSongs(){
   if(!grid) return;
 
   const q=($("songSearch")?.value||"").trim().toLowerCase();
+  let list=filterSongsByCategory(songs);
 
-  let list = filterSongsByCategory(songs);
-
-  // 依播放次數排序：多的在上
   list.sort((a,b)=>(b.plays||0)-(a.plays||0));
 
   if(q){
-    list = list.filter(s=>{
+    list=list.filter(s=>{
       const t=String(s.title||"").toLowerCase();
       const a=String(s.artist||"").toLowerCase();
       const st=String(s.subtag||"").toLowerCase();
@@ -344,12 +245,8 @@ function renderSongs(){
     });
   }
 
-  if(!list.length){
-    grid.innerHTML = `<div class="muted small">沒有歌曲</div>`;
-    return;
-  }
+  grid.innerHTML=list.length?"":`<div class="muted small">沒有歌曲</div>`;
 
-  const frag = document.createDocumentFragment();
   list.forEach(s=>{
     const el=document.createElement("div");
     el.className="song";
@@ -361,29 +258,19 @@ function renderSongs(){
         <span class="pill">播放 ${Number(s.plays||0)}</span>
       </div>
     `;
-    el.querySelector("button").onclick=async()=>{
-      await api("addqueue",{songId:s.id});
-      toast("已加入 Queue");
-      await sync(true);
-    };
-    frag.appendChild(el);
+    el.querySelector("button").onclick=async()=>{ await api("addqueue",{songId:s.id}); await sync(); };
+    grid.appendChild(el);
   });
-
-  grid.replaceChildren(frag);
 }
 
 function renderLeaderboard(){
   const box=$("leaderboardList");
   if(!box) return;
 
+  box.innerHTML="";
   const sorted=[...songs].sort((a,b)=>(b.plays||0)-(a.plays||0)).slice(0,60);
+  if(!sorted.length){ box.innerHTML=`<div class="muted small">沒有資料</div>`; return; }
 
-  if(!sorted.length){
-    box.innerHTML=`<div class="muted small">沒有資料</div>`;
-    return;
-  }
-
-  const frag = document.createDocumentFragment();
   sorted.forEach((s,idx)=>{
     const row=document.createElement("div");
     row.className="row";
@@ -397,27 +284,17 @@ function renderLeaderboard(){
         <button class="btn btn-mini btn-primary">加入 Queue</button>
       </div>
     `;
-    row.querySelector("button").onclick=async()=>{
-      await api("addqueue",{songId:s.id});
-      toast("已加入 Queue");
-      await sync(true);
-    };
-    frag.appendChild(row);
+    row.querySelector("button").onclick=async()=>{ await api("addqueue",{songId:s.id}); await sync(); };
+    box.appendChild(row);
   });
-
-  box.replaceChildren(frag);
 }
 
 function renderWishlist(){
   const box=$("wishList");
   if(!box) return;
 
-  if(!wishlist.length){
-    box.innerHTML = `<div class="muted small">還沒有許願</div>`;
-    return;
-  }
+  box.innerHTML = wishlist.length ? "" : `<div class="muted small">還沒有許願</div>`;
 
-  const frag = document.createDocumentFragment();
   wishlist.forEach(w=>{
     const raw=String(w.text||"");
     const name=raw.includes("|||") ? raw.split("|||")[0].trim() : "";
@@ -431,60 +308,45 @@ function renderWishlist(){
         <div class="row-sub">許願者：${esc(name)} · ${new Date(Number(w.ts||0)).toLocaleString()}</div>
       </div>
     `;
-    frag.appendChild(row);
+    box.appendChild(row);
   });
-
-  box.replaceChildren(frag);
 }
 
-/* ========= Sync ========= */
+/* ===== Sync (never stuck) ===== */
 
-async function sync(forceRender){
+async function sync(){
   if(!authed) return;
-  if(syncing) return; // ✅ 防止重疊同步造成卡頓
+  if(syncing) return;
   syncing = true;
 
-  setStatus("同步中…");
+  $("syncStatus") && ($("syncStatus").textContent="同步中…");
 
   try{
     const [s1,s2,s3,s4] = await Promise.all([
-      api("songs"),
-      api("queue"),
-      api("pending"),
-      api("wishlist"),
+      api("songs", null, { timeoutMs: 10000, retries: 1 }),
+      api("queue", null, { timeoutMs: 10000, retries: 1 }),
+      api("pending", null, { timeoutMs: 10000, retries: 1 }),
+      api("wishlist", null, { timeoutMs: 10000, retries: 1 }),
     ]);
 
-    const newSongs = s1.data || [];
-    const newQueue = s2.data || [];
-    const newPending = s3.data || [];
-    const newWishlist = s4.data || [];
+    songs = s1.data || [];
+    queue = s2.data || [];
+    pending = s3.data || [];
+    wishlist = s4.data || [];
 
-    const hS = fastHash(newSongs);
-    const hQ = fastHash(newQueue);
-    const hP = fastHash(newPending);
-    const hW = fastHash(newWishlist);
+    rebuildMainCatChips();
 
-    const songsChanged = (hS !== hashSongs);
-    const queueChanged = (hQ !== hashQueue);
-    const pendingChanged = (hP !== hashPending);
-    const wishChanged = (hW !== hashWishlist);
+    // 渲染（不管你在哪頁都更新，避免看起來像沒同步）
+    renderQueue();
+    renderPending();
+    renderSongs();
+    renderLeaderboard();
+    renderWishlist();
 
-    songs = newSongs; queue = newQueue; pending = newPending; wishlist = newWishlist;
-
-    // 更新 hash
-    hashSongs = hS; hashQueue = hQ; hashPending = hP; hashWishlist = hW;
-
-    // ✅ 資料變了才重畫（或動作後強制重畫）
-    if (songsChanged) rebuildMainCatChips();
-
-    if (forceRender || songsChanged || queueChanged || pendingChanged || wishChanged) {
-      renderCurrentPage();
-    }
-
-    setStatus("已同步：" + new Date().toLocaleTimeString());
-  } catch (e) {
-    setStatus("同步失敗：" + (e && e.message ? e.message : String(e)));
-  } finally {
+    $("syncStatus") && ($("syncStatus").textContent="已同步："+new Date().toLocaleTimeString());
+  }catch(e){
+    $("syncStatus") && ($("syncStatus").textContent="同步失敗：" + (e?.message||String(e)));
+  }finally{
     syncing = false;
   }
 }

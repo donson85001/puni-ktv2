@@ -283,7 +283,7 @@ function renderSongs(){
       </div>
     `;
     el.querySelector("button").onclick=async()=>{
-      await api("addqueue",{songId:s.id},{timeoutMs:10000,retries:1});
+      await await api("addqueue", { songId: s.id, by: "主播" }),{timeoutMs:10000,retries:1});
       await syncFast(true);
     };
     frag.appendChild(el);
@@ -317,7 +317,7 @@ function renderLeaderboard(){
       </div>
     `;
     row.querySelector("button").onclick=async()=>{
-      await api("addqueue",{songId:s.id},{timeoutMs:10000,retries:1});
+      await api("addqueue", { songId: s.id, by: "主播" }),{timeoutMs:10000,retries:1});
       await syncFast(true);
     };
     frag.appendChild(row);

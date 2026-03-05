@@ -3,7 +3,7 @@
 // ✅ Avoids "stuck on syncing..." forever
 
 // 你現在的後端 /exec（你給的）
-const API = "https://script.google.com/macros/s/AKfycbz-zUoe7iKS754BWUJ77FtTzNzLQXD0wmjWS_QiY6ivKeiiDtDMztrJZDUXRUbZITU/exec";
+const API = "https://script.google.com/macros/s/AKfycbx5YVnMVC-DUFoqSTDRpfXuNv_JONjUFEWPepvLf8Jv_epxANxHZfz4zROp18chqxML/exec";
 
 function esc(s){
   return String(s||"").replace(/[&<>"]/g,a=>({

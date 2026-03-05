@@ -196,3 +196,22 @@ body{
   .grid-3,.grid-2{grid-template-columns:1fr}
   .song-grid{grid-template-columns:1fr}
 }
+/* ===== add these at the END of styles.css ===== */
+
+/* leaderboard plays centered */
+.plays-box{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:48px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.18);
+  font-weight:1000;
+}
+.plays{
+  display:inline-block;
+  text-align:center;
+  min-width:18px;
+}

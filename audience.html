@@ -3,63 +3,77 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>噗妮KTV（觀眾）</title>
+  <title>噗妮KTV（主播）</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .gate{min-height:100vh;display:grid;place-items:center;padding:18px;}
+    .gate-card{width:min(520px,95vw);background:rgba(20,20,35,.75);border:1px solid rgba(145,70,255,.35);
+      border-radius:18px;box-shadow:0 18px 40px rgba(0,0,0,.5);padding:18px;}
+    .gate-row{display:flex;gap:8px}
+    .gate-row input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(10,10,18,.65);color:var(--text)}
+  </style>
 </head>
 <body>
+<div id="gate" class="gate">
+  <div class="gate-card">
+    <div class="title">主播登入</div>
+    <div class="muted small" style="margin-top:6px;">密碼在後端驗證（前端不存密碼）</div>
+    <div class="gate-row" style="margin-top:12px;">
+      <input id="pw" placeholder="輸入密碼" />
+      <button id="loginBtn" class="btn btn-primary">登入</button>
+    </div>
+    <div id="gateMsg" class="muted small" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">🎤</div>
+      <div class="logo">🎛️</div>
       <div>
-        <div class="title">噗妮KTV（觀眾）</div>
-        <div class="subtitle">⭐ = 練習中｜可唱不顯示符號</div>
+        <div class="title">噗妮KTV（主播）</div>
+        <div class="subtitle">主播點歌 / 排行榜點歌：直接進 Queue｜觀眾點歌：Pending 待通過</div>
       </div>
     </div>
-    <div class="muted small">觀眾頁</div>
+    <div class="muted small">主播頁</div>
   </header>
 
   <main class="layout">
     <aside class="sidebar">
-      <button class="nav active" data-page="home">🏠 首頁</button>
+      <button class="nav active" data-page="queue">🎤 播放清單</button>
       <button class="nav" data-page="songs">🎵 點歌</button>
       <button class="nav" data-page="leaderboard">🏆 排行榜</button>
       <button class="nav" data-page="wishlist">💬 許願池</button>
-
-      <div class="divider"></div>
-
-      <div class="panel">
-        <div class="panel-title">分類（點歌頁會顯示）</div>
-        <div class="muted small">在「點歌」頁按下分類按鈕才會出現</div>
-      </div>
+      <button class="nav" data-page="obs">🟪 OBS</button>
 
       <div class="panel">
         <div class="panel-title">同步狀態</div>
-        <div class="panel-body">
-          <div class="muted small" id="syncStatus">尚未同步</div>
-        </div>
+        <div class="panel-body"><div class="muted small" id="syncStatus">尚未同步</div></div>
       </div>
     </aside>
 
     <section class="content">
-      <div class="page" id="page-home">
+      <!-- Queue + Pending 並排 -->
+      <div class="page" id="page-queue">
         <div class="grid-2">
           <div class="card">
-            <div class="card-h">🙏 感謝各位支持</div>
-            <div class="muted">
-              這裡放你原本首頁的「感謝/打賞/圖片」內容即可（可直接搬舊站）。
-            </div>
+            <div class="card-h">🎤 播放清單（Queue）</div>
+            <div id="queueList" class="list"></div>
           </div>
+
           <div class="card">
-            <div class="card-h">🎤 目前播放清單（僅顯示）</div>
-            <div id="homeQueue" class="list"></div>
+            <div class="card-h">✅ 待通過（Pending）</div>
+            <div class="muted small">觀眾點歌會先在這裡，按「通過」才會進 Queue</div>
+            <div id="pendingList" class="list" style="margin-top:10px;"></div>
           </div>
         </div>
       </div>
 
+      <!-- Songs（含顯示/隱藏分類 + 分類 chips） -->
       <div class="page hidden" id="page-songs">
         <div class="toolbar">
           <div class="search">
-            <input id="songSearch" placeholder="搜尋歌名 / 歌手（不分大小寫）" />
+            <input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤（不分大小寫）" />
             <button id="songSearchBtn" class="btn btn-primary">搜尋</button>
           </div>
         </div>
@@ -75,45 +89,36 @@
         <div id="songGrid" class="song-grid"></div>
       </div>
 
+      <!-- Leaderboard -->
       <div class="page hidden" id="page-leaderboard">
         <div class="card">
-          <div class="card-h">🏆 排行榜（可點歌）</div>
+          <div class="card-h">🏆 排行榜（點了直接加入 Queue）</div>
           <div id="leaderboardList" class="list"></div>
         </div>
       </div>
 
+      <!-- Wishlist -->
       <div class="page hidden" id="page-wishlist">
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-h">💬 許願池</div>
-            <div class="muted small">觀眾列表只顯示歌名；主播看得到許願者</div>
-            <div class="search" style="margin-top:10px;">
-              <input id="wishName" placeholder="許願者（暱稱）" />
-              <input id="wishSong" placeholder="歌名 / 版本 / 歌手" />
-              <button id="wishBtn" class="btn btn-primary">送出</button>
-            </div>
-            <div id="wishList" class="list" style="margin-top:10px;"></div>
-          </div>
-          <div class="card">
-            <div class="card-h">📌 規則</div>
-            <div class="muted">
-              <ul>
-                <li><b>可唱</b>：不顯示符號</li>
-                <li><b>⭐</b>：練習中</li>
-                <li>排行榜 / 點歌 都能直接點歌</li>
-              </ul>
-            </div>
-          </div>
+        <div class="card">
+          <div class="card-h">💬 許願池（主播可看許願者）</div>
+          <div id="wishList" class="list"></div>
         </div>
       </div>
 
-      <footer class="footer muted small">
-        觀眾頁｜資料同步：每 5 秒
-      </footer>
+      <!-- OBS -->
+      <div class="page hidden" id="page-obs">
+        <div class="card">
+          <div class="card-h">🟪 OBS Browser Source</div>
+          <div class="muted"><div class="mono" id="obsUrl"></div></div>
+        </div>
+      </div>
+
+      <footer class="footer muted small">主播頁｜同步：每 3 秒</footer>
     </section>
   </main>
+</div>
 
-  <script src="common.js"></script>
-  <script src="audience.js"></script>
+<script src="common.js"></script>
+<script src="streamer.js"></script>
 </body>
 </html>

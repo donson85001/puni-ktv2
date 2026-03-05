@@ -174,7 +174,7 @@ function renderSongs() {
       </div>
     `;
     el.querySelector("button").onclick = async () => {
-      await api("suggest", { songId: s.id, by: "viewer" });
+     await api("addqueue", { songId: s.id });
       toast("已送出點歌（待主播通過）");
     };
     grid.appendChild(el);
@@ -202,7 +202,7 @@ function renderLeaderboard() {
       </div>
     `;
     row.querySelector("button").onclick = async () => {
-      await api("suggest", { songId: s.id, by: "viewer" });
+      await api("addqueue", { songId: s.id });
       toast("已送出點歌（待主播通過）");
     };
     box.appendChild(row);

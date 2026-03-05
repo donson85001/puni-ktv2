@@ -4,54 +4,58 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV OBS</title>
+  <link rel="stylesheet" href="styles.css" />
   <style>
-    :root{
-      --bg: rgba(0,0,0,0);
-      --card: rgba(12,12,20,.70);
-      --line: rgba(255,255,255,.10);
-      --text: rgba(255,255,255,.95);
-      --muted: rgba(255,255,255,.70);
-    }
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans TC",sans-serif;}
-    .wrap{
-      width: 360px;           /* ✅ 瘦一些（你 OBS 可以改寬度） */
-      max-width: 100%;
-      height: 100%;
+    /* ✅ IMPORTANT:
+       All OBS-specific styles are scoped under .obs-root
+       so they will NOT override other pages' styles.
+    */
+    .obs-root{
+      height:100vh;
+      width:100vw;
+      background: transparent;
       padding: 10px;
       box-sizing: border-box;
     }
-    .card{
-      height: 100%;
+
+    .obs-card{
+      height:100%;
+      width: min(360px, 100%); /* ✅ 瘦一點 */
       border:1px solid var(--line);
       border-radius: 14px;
-      background: var(--card);
+      background: rgba(12,12,20,.70);
       backdrop-filter: blur(8px);
       overflow: hidden;
       display:flex;
       flex-direction:column;
     }
-    .head{
+
+    .obs-head{
       padding:10px 12px;
       border-bottom:1px solid var(--line);
-      font-weight:800;
+      font-weight:900;
       letter-spacing:.5px;
     }
-    .list{
+
+    .obs-list{
       padding:10px 10px 12px;
       overflow:auto;
       display:flex;
       flex-direction:column;
       gap:8px;
     }
-    .item{
+
+    .obs-item{
       border:1px solid var(--line);
       border-radius: 12px;
       padding:10px 10px;
       background: rgba(0,0,0,.18);
     }
-    .t{font-weight:800}
-    .s{margin-top:4px;color:var(--muted);font-size:12px}
-    .rank{
+
+    .obs-title{font-weight:900}
+    .obs-sub{margin-top:4px;color:var(--muted);font-size:12px}
+
+    .obs-rank{
       display:inline-flex;
       width:22px;height:22px;
       border-radius:8px;
@@ -61,7 +65,8 @@
       color:var(--muted);
       font-size:12px;
     }
-    .pill{
+
+    .obs-pill{
       display:inline-block;
       margin-left:8px;
       padding:2px 8px;
@@ -72,48 +77,53 @@
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="head">🎤 播放清單</div>
-      <div class="list" id="list"></div>
+  <div class="obs-root">
+    <div class="obs-card">
+      <div class="obs-head">🎤 播放清單</div>
+      <div class="obs-list" id="list"></div>
     </div>
   </div>
 
-<script src="common.js"></script>
-<script>
-  const el = document.getElementById("list");
-  let syncing=false;
+  <script src="common.js"></script>
+  <script>
+    const el = document.getElementById("list");
+    let syncing=false;
 
-  function esc(s){
-    return String(s||"").replace(/[&<>"]/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[a]));
-  }
-
-  async function sync(){
-    if(syncing) return;
-    syncing=true;
-    try{
-      const q = await api("queue",null,{timeoutMs:10000,retries:1});
-      const list = q.data || [];
-      if(!list.length){
-        el.innerHTML = '<div class="item"><div class="t">（空）</div><div class="s">等待點歌…</div></div>';
-      }else{
-        el.innerHTML = list.map((x,i)=>`
-          <div class="item">
-            <div class="t"><span class="rank">${i+1}</span>${esc(x.title||"")}${x.practice?" ⭐":""}<span class="pill">${esc(x.category||"")}</span></div>
-            <div class="s">${esc(x.artist || (x.category==="其他" ? (x.subtag||"") : ""))}</div>
-          </div>
-        `).join("");
-      }
-    }catch(e){
-      el.innerHTML = '<div class="item"><div class="t">同步失敗</div><div class="s">'+esc(e?.message||String(e))+'</div></div>';
-    }finally{
-      syncing=false;
+    function esc(s){
+      return String(s||"").replace(/[&<>"]/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[a]));
     }
-  }
 
-  sync();
-  setInterval(sync, 2000);
-</script>
+    async function sync(){
+      if(syncing) return;
+      syncing=true;
+      try{
+        const q = await api("queue",null,{timeoutMs:10000,retries:1});
+        const list = q.data || [];
+
+        if(!list.length){
+          el.innerHTML = '<div class="obs-item"><div class="obs-title">（空）</div><div class="obs-sub">等待點歌…</div></div>';
+        }else{
+          el.innerHTML = list.map((x,i)=>`
+            <div class="obs-item">
+              <div class="obs-title">
+                <span class="obs-rank">${i+1}</span>${esc(x.title||"")}${x.practice?" ⭐":""}
+                <span class="obs-pill">${esc(x.category||"")}</span>
+              </div>
+              <div class="obs-sub">${esc(x.artist || (x.category==="其他" ? (x.subtag||"") : ""))}</div>
+            </div>
+          `).join("");
+        }
+      }catch(e){
+        el.innerHTML = '<div class="obs-item"><div class="obs-title">同步失敗</div><div class="obs-sub">'+esc(e?.message||String(e))+'</div></div>';
+      }finally{
+        syncing=false;
+      }
+    }
+
+    sync();
+    setInterval(sync, 2000);
+  </script>
 </body>
 </html>

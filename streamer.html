@@ -1,27 +1,101 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>噗妮KTV｜主播</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>噗妮KTV（主播）</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .gate{min-height:100vh;display:grid;place-items:center;padding:18px;}
+    .gate-card{width:min(520px,95vw);background:rgba(20,20,35,.75);border:1px solid rgba(145,70,255,.35);
+      border-radius:18px;box-shadow:0 18px 40px rgba(0,0,0,.5);padding:18px;}
+    .gate-row{display:flex;gap:8px}
+    .gate-row input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(10,10,18,.65);color:var(--text)}
+  </style>
 </head>
 <body>
-
-<div id="login" class="container">
-  <h2>主播登入</h2>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <input id="pw" placeholder="密碼（後端驗證）">
-    <button onclick="verify()">登入</button>
+<div id="gate" class="gate">
+  <div class="gate-card">
+    <div class="title">主播登入</div>
+    <div class="muted small" style="margin-top:6px;">密碼在後端驗證（前端不存密碼）</div>
+    <div class="gate-row" style="margin-top:12px;">
+      <input id="pw" placeholder="輸入密碼" />
+      <button id="loginBtn" class="btn btn-primary">登入</button>
+    </div>
+    <div id="gateMsg" class="muted small" style="margin-top:10px;"></div>
   </div>
 </div>
 
-<div id="panel" class="container" style="display:none">
-  <h2>播放清單</h2>
-  <div id="queue"></div>
+<div id="app" style="display:none">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🎛️</div>
+      <div>
+        <div class="title">噗妮KTV（主播）</div>
+        <div class="subtitle">主播點歌/排行榜點歌：直接進 Queue</div>
+      </div>
+    </div>
+    <div class="muted small">主播頁</div>
+  </header>
 
-  <h2>許願池（顯示許願者）</h2>
-  <div id="wishlist"></div>
+  <main class="layout">
+    <aside class="sidebar">
+      <button class="nav active" data-page="queue">🎤 播放清單</button>
+      <button class="nav" data-page="songs">🎵 點歌</button>
+      <button class="nav" data-page="leaderboard">🏆 排行榜</button>
+      <button class="nav" data-page="wishlist">💬 許願池</button>
+      <button class="nav" data-page="obs">🟪 OBS</button>
+
+      <div class="panel">
+        <div class="panel-title">同步狀態</div>
+        <div class="panel-body"><div class="muted small" id="syncStatus">尚未同步</div></div>
+      </div>
+    </aside>
+
+    <section class="content">
+      <div class="page" id="page-queue">
+        <div class="card">
+          <div class="card-h">🎤 播放清單（Queue）</div>
+          <div id="queueList" class="list"></div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-songs">
+        <div class="toolbar">
+          <div class="search">
+            <input id="songSearch" placeholder="搜尋歌名 / 歌手（不分大小寫）" />
+            <button id="songSearchBtn" class="btn btn-primary">搜尋</button>
+          </div>
+        </div>
+        <div id="songGrid" class="song-grid"></div>
+      </div>
+
+      <div class="page hidden" id="page-leaderboard">
+        <div class="card">
+          <div class="card-h">🏆 排行榜（可直接加入 Queue）</div>
+          <div id="leaderboardList" class="list"></div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-wishlist">
+        <div class="card">
+          <div class="card-h">💬 許願池（主播可看許願者）</div>
+          <div id="wishList" class="list"></div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-obs">
+        <div class="card">
+          <div class="card-h">🟪 OBS Browser Source</div>
+          <div class="muted">
+            <div class="mono" id="obsUrl"></div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer muted small">主播頁｜同步：每 3 秒</footer>
+    </section>
+  </main>
 </div>
 
 <script src="common.js"></script>

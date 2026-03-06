@@ -8,6 +8,7 @@ let wishlist = [];
 const MAIN_CATS = ["女歌手","男歌手","其他"];
 const OTHER_SUBTAGS = ["日","英","韓","Rap","情歌對唱","嗨歌/怪歌","舞蹈"];
 const OBS_LIMITS = [5,10,15,20,25,30];
+const MEDALS = ["🥇","🥈","🥉"];
 
 let mainCat = "女歌手";
 let subCat = "全部";
@@ -49,6 +50,7 @@ function init(){
   $("songSearch")?.addEventListener("input", debounce(()=>renderSongs(true), 120));
   $("toggleCats")?.addEventListener("click", ()=> $("catPanel")?.classList.toggle("hidden"));
   $("copyObsUrlBtn")?.addEventListener("click", copyObsUrl);
+  $("openObsUrlBtn")?.addEventListener("click", openObsUrl);
   $("bulkPlayedBtn")?.addEventListener("click", bulkPlayedQueue);
   $("bulkRemoveBtn")?.addEventListener("click", bulkRemoveQueue);
   buildObsControls();
@@ -232,17 +234,18 @@ function renderQueue(){
   if(!box) return;
   setQueueBatchButtonsState();
   if(!queue.length){
-    box.innerHTML = `<div class="empty-state">Queue 是空的，聊天室一來歌就會跳上來 ✨</div>`;
+    box.innerHTML = `<div class="empty-state">Queue 是空的，等聊天室一點歌就會出現在這裡 ✨</div>`;
     return;
   }
 
   box.innerHTML = queue.map((q,idx)=>{
     const who = q.by ? `🎯 ${esc(q.by)}` : "";
     const subline = esc((q.artist || (q.category==="其他" ? (q.subtag||"") : "")).trim());
+    const currentBadge = idx === 0 ? `<span class="badge">▶ 現在播放</span>` : "";
     return `
       <div class="row">
         <div class="row-left">
-          <div class="row-title"><span class="rank">${idx+1}</span>${esc(q.title||"")}${q.practice?" ⭐":""} <span class="pill">${esc(q.category||"")}</span></div>
+          <div class="row-title"><span class="rank">${idx+1}</span>${currentBadge}${esc(q.title||"")}${q.practice?" ⭐":""} <span class="pill">${esc(q.category||"")}</span></div>
           <div class="row-sub">${who}${who && subline ? " · " : ""}${subline}</div>
         </div>
         <div class="row-actions">
@@ -307,17 +310,23 @@ function renderLeaderboard(){
   const sorted=[...songs].sort((a,b)=>(b.plays||0)-(a.plays||0));
   const start=(leaderboardPage-1)*LEADERBOARD_PAGE_SIZE;
   const shown=sorted.slice(start,start+LEADERBOARD_PAGE_SIZE);
-  box.innerHTML = shown.map((s,idx)=>`
-    <div class="song song-card leaderboard-card">
-      <div class="song-title"><span class="rank">${start+idx+1}</span>${esc(s.title||"")}${s.practice?" ⭐":""}</div>
-      <div class="song-artist">${esc(s.artist || (s.category==="其他" ? (s.subtag||"") : ""))}</div>
-      <div class="song-actions">
-        <span class="pill">${esc(s.category||"")}</span>
-        <span class="pill">播放 ${Number(s.plays||0)}</span>
-        <button class="btn btn-mini btn-primary" data-songid="${esc(s.id)}">加入 Queue</button>
+  box.innerHTML = shown.map((s,idx)=>{
+    const absolute = start + idx;
+    const isTop = absolute < 3;
+    const rankLabel = absolute < 3 ? `<span class="medal">${MEDALS[absolute]}</span>` : `<span class="rank">${absolute+1}</span>`;
+    return `
+      <div class="song song-card leaderboard-card ${isTop ? 'top-3' : ''}">
+        ${isTop ? `<div class="top-ribbon">TOP ${absolute+1}</div>` : ''}
+        <div class="song-title">${rankLabel}${esc(s.title||"")}${s.practice?" ⭐":""}</div>
+        <div class="song-artist">${esc(s.artist || (s.category==="其他" ? (s.subtag||"") : ""))}</div>
+        <div class="song-actions">
+          <span class="pill">${esc(s.category||"")}</span>
+          <span class="pill">播放 ${Number(s.plays||0)}</span>
+          <button class="btn btn-mini btn-primary" data-songid="${esc(s.id)}">加入 Queue</button>
+        </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
   renderLeaderboardPager();
   wireSongQueueButtons(box);
 }
@@ -350,7 +359,6 @@ function renderWishlist(){
     await syncSlow(true);
   });
 }
-
 
 async function bulkPlayedQueue(){
   if(!queue.length) return;
@@ -477,7 +485,6 @@ function updateObsUrl(){
   obsUrl.textContent = `${base}?limit=${obsLimit}&title=1`;
 }
 
-
 function renderLeaderboardPager(){
   const pager = $("leaderboardPager");
   if(!pager) return;
@@ -506,4 +513,10 @@ async function copyObsUrl(){
     ta.remove();
   }
   setTimeout(()=>{ if(msg) msg.textContent = ""; }, 1800);
+}
+
+function openObsUrl(){
+  const text = $("obsUrl")?.textContent?.trim() || "";
+  if(!text) return;
+  window.open(text, "_blank", "noopener,noreferrer");
 }

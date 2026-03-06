@@ -39,17 +39,19 @@ async function sync(force){
 function render(queue){
   const shown = queue.slice(0, limit);
   if(!shown.length){
-    listEl.innerHTML = `<div class="obs-item"><div class="obs-title">（空）</div><div class="obs-sub">等待聊天室點歌中…</div></div>`;
+    listEl.innerHTML = `<div class="obs-item is-current"><div class="obs-title">（空）</div><div class="obs-sub">等待聊天室點歌中…</div></div>`;
     return;
   }
 
   listEl.innerHTML = shown.map((x,i)=>{
-    const singer = esc(x.artist || (x.category==="其他" ? (x.subtag||"") : ""));
+    const singer = esc(x.artist || (x.category === "其他" ? (x.subtag || "") : ""));
     const by = x.by ? `🎯 ${esc(x.by)}` : "聊天室點歌";
     const sub = singer ? `${by} · ${singer}` : by;
+    const currentBadge = i === 0 ? `<span class="obs-now-badge">▶ 現在播放</span>` : "";
+    const currentClass = i === 0 ? " is-current" : "";
     return `
-      <div class="obs-item">
-        <div class="obs-title"><span class="obs-rank">${i+1}</span>${esc(x.title||"")}${x.practice?" ⭐":""}<span class="obs-pill">${esc(x.category||"")}</span></div>
+      <div class="obs-item${currentClass}">
+        <div class="obs-title">${currentBadge}<span class="obs-rank">${i+1}</span>${esc(x.title||"")}${x.practice?" ⭐":""}<span class="obs-pill">${esc(x.category||"")}</span></div>
         <div class="obs-sub">${sub}</div>
       </div>
     `;

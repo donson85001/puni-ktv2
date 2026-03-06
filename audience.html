@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV（觀眾）</title>
-  <link rel="stylesheet" href="styles.css?v=20260306v10" />
+  <link rel="stylesheet" href="styles.css?v=20260306b" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="logo"><img src="cute.gif" alt="可愛小海豹" class="logo-gif" /></div>
+      <div class="logo">🦭</div>
       <div>
         <div class="title">噗妮KTV（觀眾）</div>
-        <div class="subtitle strong-text">歌單查詢版｜想點歌請直接到聊天室使用 <b>!點歌</b></div>
+        <div class="subtitle strong-text">歌單查詢版｜想點歌請直接到聊天室使用 !點歌</div>
       </div>
     </div>
     <div class="muted small label-strong">觀眾頁</div>
@@ -45,7 +45,7 @@
           <div class="toolbar">
             <div class="hero" style="flex:1; min-width:280px;">
               <h2>今天歌單想聽哪首？</h2>
-              <p class="strong-text">先看歌單，再到聊天室輸入 <b>!點歌 歌名 / 歌手</b>。主播那邊會快速收到你的點歌。</p>
+              <p class="strong-text">先看歌單，再到聊天室使用 <b>!點歌</b>，主播那邊會快速更新播放清單。</p>
             </div>
           </div>
 
@@ -68,7 +68,7 @@
             <div class="card">
               <div class="card-h">💬 點歌方式</div>
               <div class="note-text">
-                這個網站只提供查歌與看播放清單。<br>
+                觀眾網站已移除站內點歌。<br>
                 想點歌請直接在聊天室輸入：<b>!點歌 歌名 / 歌手</b>
               </div>
             </div>
@@ -102,7 +102,7 @@
         <div class="page hidden" id="page-leaderboard">
           <div class="card">
             <div class="card-h">🏆 熱門歌曲排行榜</div>
-            <div class="note-text" style="margin-bottom:12px;">依播放次數排序，保留你要的四欄卡片，同時把前三名做得更搶眼。</div>
+            <div class="note-text" style="margin-bottom:12px;">依播放次數排序，統一改成四欄卡片顯示。</div>
             <div id="leaderboardList" class="song-grid four-grid compact-grid"></div>
             <div class="pager" id="leaderboardPager"></div>
           </div>
@@ -111,7 +111,7 @@
         <div class="page hidden" id="page-wishlist">
           <div class="card">
             <div class="card-h">💬 許願池</div>
-            <div class="note-text" style="margin-bottom:12px;">可以填許願歌名與許願人。觀眾頁只顯示歌名，許願人只有主播頁面看得到。</div>
+            <div class="note-text" style="margin-bottom:12px;">可以填許願歌名與許願人。觀眾頁只會顯示歌名。</div>
             <form id="wishForm" class="wish-form">
               <input id="wishName" placeholder="許願人（可任意填寫）" maxlength="40" />
               <input id="wishSong" placeholder="許願歌名" maxlength="120" />
@@ -122,12 +122,12 @@
           </div>
         </div>
 
-        <footer class="footer note-text">觀眾頁｜播放清單更新較快，歌單資料更新較慢，整體改成更清楚、更漂亮、更適合直播的節奏</footer>
+        <footer class="footer note-text">觀眾頁｜播放清單更新較快，歌單資料更新較慢，版面已縮短並加深對比，減少卡頓</footer>
       </div>
     </section>
   </main>
 
 <script src="common.js?v=20260306"></script>
-<script src="audience.js?v=20260306v10"></script>
+<script src="audience.js?v=20260306b"></script>
 </body>
 </html>

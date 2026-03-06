@@ -4,9 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV（主播）</title>
-  <link rel="stylesheet" href="styles.css?v=20260306v10" />
+  <link rel="stylesheet" href="styles.css?v=20260306b" />
 </head>
 <body>
+
 <div id="gate" class="gate">
   <div class="gate-card">
     <div class="title">主播登入</div>
@@ -25,9 +26,10 @@
       <div class="logo logo-image-wrap"><img src="streamer-logo.png" alt="主播頭像" class="logo-image" /></div>
       <div>
         <div class="title">噗妮KTV（主播）</div>
-        <div class="subtitle strong-text">直播操作台｜漂亮、快、好按，一次把點歌、Queue、OBS 控制好</div>
+        <div class="subtitle strong-text">播放清單更新快，其餘頁面更新放慢，減少卡頓</div>
       </div>
     </div>
+
     <div class="topbar-right">
       <div class="muted small label-strong">主播頁</div>
       <button id="logoutBtn" class="btn btn-mini">登出</button>
@@ -40,6 +42,7 @@
       <button class="nav" data-page="songs">🎵 歌單</button>
       <button class="nav" data-page="leaderboard">🏆 排行榜</button>
       <button class="nav" data-page="wishlist">💬 許願池</button>
+      
       <div class="panel">
         <div class="panel-title">同步狀態</div>
         <div class="panel-body"><div class="muted small label-strong" id="syncStatus">尚未同步</div></div>
@@ -52,20 +55,19 @@
           <div class="toolbar">
             <div class="hero" style="flex:1; min-width:280px;">
               <h2>主播播放清單</h2>
-              <p class="strong-text">左邊直接管理 Queue，右邊設定 OBS 顯示首數與複製來源。唱完整包歌單時，按一次就能把整份播放次數全部 +1。</p>
+              <p class="strong-text">左邊管理播放清單，右邊直接設定 OBS。唱完整包歌單時可一鍵把全部播放次數 +1。</p>
             </div>
           </div>
-
           <div class="queue-obs-grid">
             <div class="card queue-card">
               <div class="queue-card-head">
                 <div>
                   <div class="card-h">🎤 播放清單（Queue）</div>
-                  <div class="note-text queue-head-note">單首可個別處理；上方兩顆按鈕能一次處理整份播放清單。第一首就是目前要唱的歌。</div>
+                  <div class="note-text queue-head-note">單首可個別處理，上方兩顆按鈕可一次處理整份播放清單。</div>
                 </div>
                 <div class="bulk-actions">
                   <button id="bulkPlayedBtn" class="btn btn-primary btn-mini bulk-btn" type="button">一鍵全部 +1</button>
-                  <button id="bulkRemoveBtn" class="btn btn-danger btn-mini bulk-btn" type="button">一鍵全部刪除</button>
+                  <button id="bulkRemoveBtn" class="btn btn-mini bulk-btn" type="button">一鍵全部刪除</button>
                 </div>
               </div>
               <div id="queueList" class="list list-compact scroll-list queue-scroll"></div>
@@ -73,7 +75,7 @@
 
             <div class="card obs-side-card">
               <div class="card-h">🟪 OBS Browser Source</div>
-              <div class="note-text" style="margin-bottom:10px;">先選今天要顯示幾首，再按複製或直接開新視窗。OBS 會自動高亮目前播放的第一首。</div>
+              <div class="note-text" style="margin-bottom:10px;">先選今天要顯示幾首，再按複製直接貼到 OBS Browser Source。</div>
               <div class="obs-setting-row compact-obs-setting">
                 <div class="obs-setting-label">今日播放清單上限</div>
                 <div class="panel-body chip-grid obs-limit-grid" id="obsLimitControls"></div>
@@ -81,24 +83,18 @@
               <div class="obs-link-box mono" id="obsUrl"></div>
               <div class="obs-url-actions">
                 <button id="copyObsUrlBtn" class="btn btn-primary copy-btn" type="button">複製 OBS Source</button>
-                <button id="openObsUrlBtn" class="btn copy-btn" type="button">開啟 OBS 頁面</button>
                 <span id="copyObsMsg" class="note-text"></span>
               </div>
               <div class="mini-obs-preview">
-                <div class="mini-obs-title">OBS 預覽樣式</div>
-                <div class="mini-obs-note">第一首會高亮顯示為「現在播放」，其餘歌曲會依序列出。這版也加入了動畫、較大的字體與更高對比。</div>
-                <div class="obs-mock">
-                  <div class="obs-mock-item is-now">▶ 現在播放　青花瓷</div>
-                  <div class="obs-mock-item">2　稻香</div>
-                  <div class="obs-mock-item">3　告白氣球</div>
-                </div>
+                <div class="mini-obs-title">OBS 畫面預覽說明</div>
+                <div class="mini-obs-note">OBS 會依你設定的上限顯示前幾首，網址已自動帶入 limit 參數。</div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="page hidden" id="page-songs">
-          <div class="notice-strip note-text">歌單頁已改成更輕量的渲染方式，避免每次同步整頁卡住。搜尋會即時反應，分類保持你喜歡的小按鈕樣式。</div>
+          <div class="notice-strip note-text">歌單頁已改成更輕量的渲染方式，避免每次同步整頁卡住。</div>
           <div class="toolbar toolbar-stack">
             <div class="search search-wide clear-text-wrap">
               <input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤（不分大小寫）" />
@@ -119,8 +115,8 @@
 
         <div class="page hidden" id="page-leaderboard">
           <div class="card">
-            <div class="card-h">🏆 熱門排行榜</div>
-            <div class="note-text" style="margin-bottom:12px;">保留你要的四欄卡片，前三名再做更明顯的高亮樣式，整體更有節目感。</div>
+            <div class="card-h">🏆 排行榜</div>
+            <div class="note-text" style="margin-bottom:12px;">排行榜改成四欄卡片顯示，比原本更整齊。</div>
             <div id="leaderboardList" class="song-grid four-grid compact-grid"></div>
             <div class="pager" id="leaderboardPager"></div>
           </div>
@@ -129,18 +125,18 @@
         <div class="page hidden" id="page-wishlist">
           <div class="card">
             <div class="card-h">💬 許願池（主播可刪除）</div>
-            <div class="note-text" style="margin-bottom:12px;">觀眾可以填許願歌名與許願人。觀眾頁只顯示歌名，主播頁會完整看到許願人資訊。</div>
+            <div class="note-text" style="margin-bottom:12px;">觀眾端可填許願歌名與許願人。觀眾只看得到歌名，主播看得到許願人。</div>
             <div id="wishList" class="song-grid four-grid compact-grid"></div>
           </div>
         </div>
 
-        <footer class="footer note-text">主播頁｜Queue 約 1.5 秒更新一次，歌單 / 許願池約 45 秒更新一次，操作保持快但不亂刷新</footer>
+        <footer class="footer note-text">主播頁｜Queue 約 1.5 秒更新一次，歌單 / 許願池約 45 秒更新一次</footer>
       </div>
     </section>
   </main>
 </div>
 
 <script src="common.js?v=20260306"></script>
-<script src="streamer.js?v=20260306v10"></script>
+<script src="streamer.js?v=20260306b"></script>
 </body>
 </html>

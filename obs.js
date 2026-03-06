@@ -1,55 +1,57 @@
 const params = new URLSearchParams(location.search);
-const limit = Math.max(1, Math.min(50, parseInt(params.get("limit") || "10", 10)));
-const showTitle = (params.get("title") !== "0");
-const transparent = (params.get("transparent") === "1");
+const listEl = document.getElementById("list");
+const syncTextEl = document.getElementById("syncText");
+const headerEl = document.getElementById("header");
 
-if(!showTitle) {
-  const h=document.getElementById("header");
-  if(h) h.style.display="none";
-}
-if(transparent) document.body.style.background="transparent";
+const showTitle = params.get("title") !== "0";
+const transparent = params.get("transparent") === "1";
+const presetLimit = parseInt(params.get("limit") || "10", 10);
+const limit = Number.isFinite(presetLimit) ? Math.max(1, Math.min(30, presetLimit)) : 10;
+let syncing = false;
+let lastSig = "";
 
-let last=0;
+if(!showTitle && headerEl) headerEl.style.display = "none";
+if(transparent) document.body.style.background = "transparent";
+
 sync(true);
-setInterval(()=>sync(false), 2000);
+setInterval(()=>sync(false), 1500);
 
 async function sync(force){
-  const now=Date.now();
-  if(!force && now-last<1200) return;
-  last=now;
-
+  if(syncing) return;
+  syncing = true;
   try{
-    const q = await api("queue");
-    const queue = (q.data||q||[]);
-    render(queue);
-    document.getElementById("syncText").textContent = "已同步：" + new Date().toLocaleTimeString();
+    const q = await api("queue", null, {timeoutMs:10000,retries:1});
+    const queue = q.data || [];
+    const sig = JSON.stringify(queue.map(x=>[x.id,x.title,x.by,x.artist,x.category,x.practice]));
+    if(force || sig !== lastSig){
+      lastSig = sig;
+      render(queue);
+    }
+    syncTextEl.textContent = "已同步：" + new Date().toLocaleTimeString();
   }catch(e){
-    document.getElementById("syncText").textContent = "同步失敗";
+    listEl.innerHTML = `<div class="obs-item"><div class="obs-title">同步失敗</div><div class="obs-sub">${esc(e?.message || String(e))}</div></div>`;
+    syncTextEl.textContent = "同步失敗";
+  }finally{
+    syncing = false;
   }
 }
 
 function render(queue){
-  const nowTitle=document.getElementById("nowTitle");
-  const nowArtist=document.getElementById("nowArtist");
-  const nextList=document.getElementById("nextList");
-
-  if(!queue.length){
-    nowTitle.textContent="（尚無歌曲）";
-    nowArtist.textContent="";
-    nextList.innerHTML="";
+  const shown = queue.slice(0, limit);
+  if(!shown.length){
+    listEl.innerHTML = `<div class="obs-item"><div class="obs-title">（空）</div><div class="obs-sub">等待聊天室點歌中…</div></div>`;
     return;
   }
 
-  const now=queue[0];
-  nowTitle.textContent = now.title || "";
-  nowArtist.textContent = [now.artist||"", now.category||""].filter(Boolean).join(" · ");
-
-  const rest=queue.slice(1, 1+limit);
-  nextList.innerHTML = rest.length ? "" : `<div style="color:var(--muted)">沒有下一首</div>`;
-  rest.forEach((s,idx)=>{
-    const div=document.createElement("div");
-    div.className="item";
-    div.textContent = `${idx+1}. ${s.title || ""}`;
-    nextList.appendChild(div);
-  });
+  listEl.innerHTML = shown.map((x,i)=>{
+    const singer = esc(x.artist || (x.category==="其他" ? (x.subtag||"") : ""));
+    const by = x.by ? `🎯 ${esc(x.by)}` : "聊天室點歌";
+    const sub = singer ? `${by} · ${singer}` : by;
+    return `
+      <div class="obs-item">
+        <div class="obs-title"><span class="obs-rank">${i+1}</span>${esc(x.title||"")}${x.practice?" ⭐":""}<span class="obs-pill">${esc(x.category||"")}</span></div>
+        <div class="obs-sub">${sub}</div>
+      </div>
+    `;
+  }).join("");
 }

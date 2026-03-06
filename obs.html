@@ -4,116 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV OBS</title>
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    .obs-root{
-      height:100vh;
-      width:100vw;
-      background: transparent;
-      padding: 10px;
-      box-sizing: border-box;
-    }
-    .obs-card{
-      height:100%;
-      width: min(360px, 100%);
-      border:1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(12,12,20,.70);
-      backdrop-filter: blur(8px);
-      overflow: hidden;
-      display:flex;
-      flex-direction:column;
-    }
-    .obs-head{
-      padding:10px 12px;
-      border-bottom:1px solid var(--line);
-      font-weight:900;
-      letter-spacing:.5px;
-    }
-    .obs-list{
-      padding:10px 10px 12px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-    .obs-item{
-      border:1px solid var(--line);
-      border-radius: 12px;
-      padding:10px 10px;
-      background: rgba(0,0,0,.18);
-    }
-    .obs-title{font-weight:900}
-    .obs-sub{margin-top:4px;color:var(--muted);font-size:12px}
-    .obs-rank{
-      display:inline-flex;
-      width:22px;height:22px;
-      border-radius:8px;
-      align-items:center;justify-content:center;
-      margin-right:8px;
-      border:1px solid var(--line);
-      color:var(--muted);
-      font-size:12px;
-    }
-    .obs-pill{
-      display:inline-block;
-      margin-left:8px;
-      padding:2px 8px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      color:var(--muted);
-      font-size:12px;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css?v=20260306" />
 </head>
-
-<body>
+<body class="obs-body">
   <div class="obs-root">
     <div class="obs-card">
-      <div class="obs-head">🎤 播放清單</div>
+      <div class="obs-head" id="header">今日歌單</div>
       <div class="obs-list" id="list"></div>
+      <div class="obs-status" id="syncText">尚未同步</div>
     </div>
   </div>
 
-  <script src="common.js"></script>
-  <script>
-    const el = document.getElementById("list");
-    let syncing=false;
-
-    function esc(s){
-      return String(s||"").replace(/[&<>"]/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[a]));
-    }
-
-    async function sync(){
-      if(syncing) return;
-      syncing=true;
-      try{
-        const q = await api("queue",null,{timeoutMs:10000,retries:1});
-        const list = q.data || [];
-
-        if(!list.length){
-          el.innerHTML = '<div class="obs-item"><div class="obs-title">（空）</div><div class="obs-sub">等待點歌…</div></div>';
-        }else{
-          el.innerHTML = list.map((x,i)=>`
-            <div class="obs-item">
-              <div class="obs-sub">🎯 ${esc(x.by || "")}</div>
-              <div class="obs-title">
-                <span class="obs-rank">${i+1}</span>${esc(x.title||"")}${x.practice?" ⭐":""}
-                <span class="obs-pill">${esc(x.category||"")}</span>
-              </div>
-              <div class="obs-sub">${esc(x.artist || (x.category==="其他" ? (x.subtag||"") : ""))}</div>
-            </div>
-          `).join("");
-        }
-      }catch(e){
-        el.innerHTML = '<div class="obs-item"><div class="obs-title">同步失敗</div><div class="obs-sub">'+esc(e?.message||String(e))+'</div></div>';
-      }finally{
-        syncing=false;
-      }
-    }
-
-    sync();
-    setInterval(sync, 2000);
-  </script>
+  <script src="common.js?v=20260306"></script>
+  <script src="obs.js?v=20260306"></script>
 </body>
 </html>

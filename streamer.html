@@ -4,42 +4,34 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV（主播）</title>
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    .gate{min-height:100vh;display:grid;place-items:center;padding:18px;}
-    .gate-card{width:min(520px,95vw);background:rgba(20,20,35,.75);border:1px solid rgba(145,70,255,.35);
-      border-radius:18px;box-shadow:0 18px 40px rgba(0,0,0,.5);padding:18px;}
-    .gate-row{display:flex;gap:8px}
-    .gate-row input{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(10,10,18,.65);color:var(--text)}
-    .topbar-right{display:flex;gap:10px;align-items:center}
-  </style>
+  <link rel="stylesheet" href="styles.css?v=20260306b" />
 </head>
 <body>
 
 <div id="gate" class="gate">
   <div class="gate-card">
     <div class="title">主播登入</div>
-    <div class="muted small" style="margin-top:6px;">密碼在後端驗證（前端不存密碼）</div>
+    <div class="muted small strong-text" style="margin-top:6px;">登入狀態會保留，不會自動幫你登出</div>
     <div class="gate-row" style="margin-top:12px;">
       <input id="pw" placeholder="輸入密碼" type="password" />
       <button id="loginBtn" class="btn btn-primary">登入</button>
     </div>
-    <div id="gateMsg" class="muted small" style="margin-top:10px;"></div>
+    <div id="gateMsg" class="muted small strong-text" style="margin-top:10px;"></div>
   </div>
 </div>
 
 <div id="app" style="display:none">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">🎛️</div>
+      <div class="logo logo-image-wrap"><img src="streamer-logo.png" alt="主播頭像" class="logo-image" /></div>
       <div>
         <div class="title">噗妮KTV（主播）</div>
-        <div class="subtitle">點歌/排行榜點歌：直接進播放清單（Queue）</div>
+        <div class="subtitle strong-text">播放清單更新快，其餘頁面更新放慢，減少卡頓</div>
       </div>
     </div>
 
     <div class="topbar-right">
-      <div class="muted small">主播頁</div>
+      <div class="muted small label-strong">主播頁</div>
       <button id="logoutBtn" class="btn btn-mini">登出</button>
     </div>
   </header>
@@ -47,73 +39,104 @@
   <main class="layout">
     <aside class="sidebar">
       <button class="nav active" data-page="queue">🎤 播放清單</button>
-      <button class="nav" data-page="songs">🎵 點歌</button>
+      <button class="nav" data-page="songs">🎵 歌單</button>
       <button class="nav" data-page="leaderboard">🏆 排行榜</button>
       <button class="nav" data-page="wishlist">💬 許願池</button>
-      <button class="nav" data-page="obs">🟪 OBS</button>
-
+      
       <div class="panel">
         <div class="panel-title">同步狀態</div>
-        <div class="panel-body"><div class="muted small" id="syncStatus">尚未同步</div></div>
+        <div class="panel-body"><div class="muted small label-strong" id="syncStatus">尚未同步</div></div>
       </div>
     </aside>
 
     <section class="content">
-      <div class="page" id="page-queue">
-        <div class="card">
-          <div class="card-h">🎤 播放清單（Queue）</div>
-          <div id="queueList" class="list"></div>
-        </div>
-      </div>
+      <div class="section-shell">
+        <div class="page" id="page-queue">
+          <div class="toolbar">
+            <div class="hero" style="flex:1; min-width:280px;">
+              <h2>主播播放清單</h2>
+              <p class="strong-text">左邊管理播放清單，右邊直接設定 OBS。唱完整包歌單時可一鍵把全部播放次數 +1。</p>
+            </div>
+          </div>
+          <div class="queue-obs-grid">
+            <div class="card queue-card">
+              <div class="queue-card-head">
+                <div>
+                  <div class="card-h">🎤 播放清單（Queue）</div>
+                  <div class="note-text queue-head-note">單首可個別處理，上方兩顆按鈕可一次處理整份播放清單。</div>
+                </div>
+                <div class="bulk-actions">
+                  <button id="bulkPlayedBtn" class="btn btn-primary btn-mini bulk-btn" type="button">一鍵全部 +1</button>
+                  <button id="bulkRemoveBtn" class="btn btn-mini bulk-btn" type="button">一鍵全部刪除</button>
+                </div>
+              </div>
+              <div id="queueList" class="list list-compact scroll-list queue-scroll"></div>
+            </div>
 
-      <div class="page hidden" id="page-songs">
-        <div class="toolbar">
-          <div class="search">
-            <input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤（不分大小寫）" />
-            <button id="songSearchBtn" class="btn btn-primary">搜尋</button>
+            <div class="card obs-side-card">
+              <div class="card-h">🟪 OBS Browser Source</div>
+              <div class="note-text" style="margin-bottom:10px;">先選今天要顯示幾首，再按複製直接貼到 OBS Browser Source。</div>
+              <div class="obs-setting-row compact-obs-setting">
+                <div class="obs-setting-label">今日播放清單上限</div>
+                <div class="panel-body chip-grid obs-limit-grid" id="obsLimitControls"></div>
+              </div>
+              <div class="obs-link-box mono" id="obsUrl"></div>
+              <div class="obs-url-actions">
+                <button id="copyObsUrlBtn" class="btn btn-primary copy-btn" type="button">複製 OBS Source</button>
+                <span id="copyObsMsg" class="note-text"></span>
+              </div>
+              <div class="mini-obs-preview">
+                <div class="mini-obs-title">OBS 畫面預覽說明</div>
+                <div class="mini-obs-note">OBS 會依你設定的上限顯示前幾首，網址已自動帶入 limit 參數。</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div style="margin-bottom:12px;">
-          <button id="toggleCats" class="btn">顯示/隱藏 分類</button>
-          <div id="catPanel" class="panel" style="display:none;">
-            <div class="panel-title">分類（點歌正下方）</div>
-            <div class="panel-body" id="catChips"></div>
+        <div class="page hidden" id="page-songs">
+          <div class="notice-strip note-text">歌單頁已改成更輕量的渲染方式，避免每次同步整頁卡住。</div>
+          <div class="toolbar toolbar-stack">
+            <div class="search search-wide clear-text-wrap">
+              <input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤（不分大小寫）" />
+              <button id="songSearchBtn" class="btn btn-primary">搜尋</button>
+              <button id="toggleCats" class="btn btn-strong">顯示 / 隱藏 分類</button>
+            </div>
+          </div>
+
+          <div id="catPanel" class="panel" style="margin-bottom:12px;">
+            <div class="panel-title">分類</div>
+            <div class="panel-body chip-grid" id="mainCatChips"></div>
+            <div class="panel-subtitle">子分類</div>
+            <div class="panel-body chip-grid" id="catChips"></div>
+          </div>
+
+          <div id="songGrid" class="song-grid four-grid compact-grid"></div>
+        </div>
+
+        <div class="page hidden" id="page-leaderboard">
+          <div class="card">
+            <div class="card-h">🏆 排行榜</div>
+            <div class="note-text" style="margin-bottom:12px;">排行榜改成四欄卡片顯示，比原本更整齊。</div>
+            <div id="leaderboardList" class="song-grid four-grid compact-grid"></div>
+            <div class="pager" id="leaderboardPager"></div>
           </div>
         </div>
 
-        <div id="songGrid" class="song-grid"></div>
-      </div>
-
-      <div class="page hidden" id="page-leaderboard">
-        <div class="card">
-          <div class="card-h">🏆 排行榜（樣式同點歌卡片）</div>
-          <div id="leaderboardList" class="list"></div>
-        </div>
-      </div>
-
-      <div class="page hidden" id="page-wishlist">
-        <div class="card">
-          <div class="card-h">💬 許願池（主播可刪除）</div>
-          <div id="wishList" class="list"></div>
-        </div>
-      </div>
-
-      <div class="page hidden" id="page-obs">
-        <div class="card">
-          <div class="card-h">🟪 OBS Browser Source（完整播放清單）</div>
-          <div class="muted">
-            <div class="mono" id="obsUrl"></div>
+        <div class="page hidden" id="page-wishlist">
+          <div class="card">
+            <div class="card-h">💬 許願池（主播可刪除）</div>
+            <div class="note-text" style="margin-bottom:12px;">觀眾端可填許願歌名與許願人。觀眾只看得到歌名，主播看得到許願人。</div>
+            <div id="wishList" class="song-grid four-grid compact-grid"></div>
           </div>
         </div>
-      </div>
 
-      <footer class="footer muted small">主播頁｜同步：Queue 每 2 秒、歌曲每 25 秒</footer>
+        <footer class="footer note-text">主播頁｜Queue 約 1.5 秒更新一次，歌單 / 許願池約 45 秒更新一次</footer>
+      </div>
     </section>
   </main>
 </div>
 
-<script src="common.js"></script>
-<script src="streamer.js"></script>
+<script src="common.js?v=20260306"></script>
+<script src="streamer.js?v=20260306b"></script>
 </body>
 </html>

@@ -1,38 +1,62 @@
-// common.js (final stable)
-const API = "https://script.google.com/macros/s/AKfycbwDxe0ylZu0lyDjTY3YFoteQqvZQK_w14a8pFj7SmRjgzWZS7Zv6vev7Lrpt1MhloMK/exec";
+const API = "https://script.google.com/macros/s/AKfycbybndsLOSY0jdSG5mGRymWErC-SHATmnOnlKQDj6ZKlr6HkvLbOffeGSObLrAOR62ex/exec";
 
 function esc(s){
-  return String(s||"").replace(/[&<>"]/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[a]));
+  return String(s ?? "").replace(/[&<>\"]/g, ch => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;'
+  })[ch]);
 }
 
-function displayUserName(s){ return String(s||"").trim() || "聊天室點歌"; }
-function statusLabel(status){ return status==='playing' ? '正在播放' : status==='done' ? '已唱' : '待播'; }
+function debounce(fn, ms){
+  let t = null;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
 
-async function api(action, payloadObj = null, opt = {}) {
+async function api(action, payload = null, opt = {}){
   const timeoutMs = opt.timeoutMs ?? 12000;
   const retries = opt.retries ?? 1;
-  const cacheBust = opt.cacheBust ?? true;
   let lastErr = null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+
+  for(let attempt=0; attempt<=retries; attempt++){
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(new Error('timeout')), timeoutMs);
-    try {
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try{
       const url = new URL(API);
       url.searchParams.set('action', action);
-      if (payloadObj && Object.keys(payloadObj).length) url.searchParams.set('payload', JSON.stringify(payloadObj));
-      if (cacheBust) url.searchParams.set('_', String(Date.now()));
-      const res = await fetch(url.toString(), { method:'GET', cache:'no-store', signal:ctrl.signal });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0,180)}`);
-      if (!text.trim().startsWith('{') && !text.trim().startsWith('[')) throw new Error('API not JSON: ' + text.slice(0,180));
-      const json = JSON.parse(text);
-      if (json && json.ok === false) throw new Error(json.error || 'API ok:false');
-      return json;
-    } catch (e) {
-      lastErr = e;
-      if (attempt < retries) continue;
+      if(payload && typeof payload === 'object'){
+        url.searchParams.set('payload', JSON.stringify(payload));
+        Object.entries(payload).forEach(([k,v]) => {
+          if(v !== undefined && v !== null) url.searchParams.set(k, String(v));
+        });
+      }
+      url.searchParams.set('_', String(Date.now()));
+      const res = await fetch(url.toString(), {cache:'no-store', signal:ctrl.signal});
+      const txt = await res.text();
+      if(!res.ok) throw new Error(`HTTP ${res.status}: ${txt.slice(0,160)}`);
+      const trimmed = txt.trim();
+      if(trimmed === 'ok') return {ok:true, data:'ok'};
+      if(!trimmed.startsWith('{') && !trimmed.startsWith('[')) throw new Error('API not JSON: ' + trimmed.slice(0,160));
+      const data = JSON.parse(trimmed);
+      if(data && data.ok === false) throw new Error(data.message || data.error || 'API ok:false');
+      return data;
+    }catch(err){
+      lastErr = err;
+      if(attempt < retries) continue;
       throw lastErr;
-    } finally { clearTimeout(t); }
+    }finally{
+      clearTimeout(timer);
+    }
   }
   throw lastErr || new Error('unknown api error');
+}
+
+function openYoutubeSearch(title){
+  const q = String(title || '').trim();
+  if(!q) return;
+  window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank', 'noopener,noreferrer');
 }

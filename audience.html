@@ -4,18 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV（觀眾）</title>
-  <link rel="stylesheet" href="styles.css?v=20260306b" />
+  <link rel="stylesheet" href="styles.css?v=audfix4" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="logo">🦭</div>
+      <div class="logo"><img src="cute.gif" alt="cute" /></div>
       <div>
         <div class="title">噗妮KTV（觀眾）</div>
-        <div class="subtitle strong-text">歌單查詢版｜想點歌請直接到聊天室使用 !點歌</div>
+        <div class="subtitle">歌單查詢版｜想點歌請直接到聊天室使用 <b>!點歌</b></div>
       </div>
     </div>
-    <div class="muted small label-strong">觀眾頁</div>
+    <div class="subtitle">觀眾頁</div>
   </header>
 
   <main class="layout">
@@ -23,30 +23,25 @@
       <button class="nav active" data-page="queue">🎤 播放清單</button>
       <button class="nav" data-page="songs">🎵 歌單</button>
       <button class="nav" data-page="leaderboard">🏆 排行榜</button>
-      <button class="nav" data-page="wishlist">💬 許願池</button>
+      <button class="nav" data-page="wish">💬 許願池</button>
 
       <div class="panel">
         <div class="panel-title">同步狀態</div>
-        <div class="panel-body"><div class="muted small label-strong" id="syncStatus">尚未同步</div></div>
+        <div class="panel-body" id="syncStatus">尚未同步</div>
       </div>
 
-      <div class="panel" style="margin-top:12px;">
+      <div class="panel">
         <div class="panel-title">提醒</div>
-        <div class="panel-body note-text">
-          觀眾站現在只看歌單，不提供站內點歌。<br />
-          看完歌單後，請直接到聊天室使用 <b>!點歌</b>
-        </div>
+        <div class="panel-body">想點歌請直接到聊天室輸入：<b>!點歌 歌名 / 歌手</b></div>
       </div>
     </aside>
 
     <section class="content">
       <div class="section-shell">
         <div class="page" id="page-queue">
-          <div class="toolbar">
-            <div class="hero" style="flex:1; min-width:280px;">
-              <h2>今天歌單想聽哪首？</h2>
-              <p class="strong-text">先看歌單，再到聊天室使用 <b>!點歌</b>，主播那邊會快速更新播放清單。</p>
-            </div>
+          <div class="hero">
+            <h2>今天歌單想聽哪首？</h2>
+            <p>先看歌單，再到聊天室輸入 <b>!點歌 歌名 / 歌手</b>。</p>
           </div>
 
           <div class="stats-row">
@@ -64,70 +59,77 @@
             </div>
           </div>
 
-          <div class="grid-2 audience-home-grid">
+          <div class="grid-2">
             <div class="card">
               <div class="card-h">💬 點歌方式</div>
-              <div class="note-text">
-                觀眾網站已移除站內點歌。<br>
-                想點歌請直接在聊天室輸入：<b>!點歌 歌名 / 歌手</b>
-              </div>
+              <div class="note-text">站內只提供查歌。想點歌請直接到聊天室使用 <b>!點歌</b>。</div>
             </div>
             <div class="card">
               <div class="card-h">🎤 目前播放清單</div>
-              <div id="homeQueue" class="list list-compact scroll-list"></div>
+              <div id="homeQueue" class="list scroll-list home-queue"></div>
             </div>
           </div>
         </div>
 
         <div class="page hidden" id="page-songs">
-          <div class="notice-strip note-text">這裡只提供查歌。想點歌請直接到聊天室使用 <b>!點歌</b>。</div>
-          <div class="toolbar toolbar-stack">
-            <div class="search search-wide clear-text-wrap">
-              <input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤（不分大小寫）" />
+          <div class="hero">
+            <h2>歌單</h2>
+            <p>支援分類與關鍵字搜尋。</p>
+          </div>
+
+          <div class="toolbar">
+            <div class="search">
+              <input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤" />
               <button id="songSearchBtn" class="btn btn-primary">搜尋</button>
-              <button id="toggleCats" class="btn btn-strong">顯示 / 隱藏 分類</button>
+              <button id="toggleCats" class="btn">顯示 / 隱藏 分類</button>
             </div>
           </div>
 
-          <div id="catPanel" class="panel" style="margin-bottom:12px;">
-            <div class="panel-title">分類</div>
-            <div class="panel-body chip-grid" id="mainCatChips"></div>
-            <div class="panel-subtitle">子分類</div>
-            <div class="panel-body chip-grid" id="catChips"></div>
+          <div id="catPanel" class="card">
+            <div class="panel-title simple">分類</div>
+            <div id="mainCatChips" class="chip-grid"></div>
+            <div id="catChips" class="chip-grid mt12"></div>
           </div>
 
-          <div id="songGrid" class="song-grid four-grid compact-grid"></div>
+          <div id="songGrid" class="song-grid"></div>
         </div>
 
         <div class="page hidden" id="page-leaderboard">
-          <div class="card">
-            <div class="card-h">🏆 熱門歌曲排行榜</div>
-            <div class="note-text" style="margin-bottom:12px;">依播放次數排序，統一改成四欄卡片顯示。</div>
-            <div id="leaderboardList" class="song-grid four-grid compact-grid"></div>
-            <div class="pager" id="leaderboardPager"></div>
+          <div class="hero">
+            <h2>熱門排行榜</h2>
+            <p>依播放次數排序。</p>
           </div>
+
+          <div id="leaderboardList" class="song-grid"></div>
+          <div id="leaderboardPager" class="pager"></div>
         </div>
 
-        <div class="page hidden" id="page-wishlist">
+        <div class="page hidden" id="page-wish">
+          <div class="hero">
+            <h2>許願池</h2>
+            <p>不在歌單裡的歌，可以先丟進許願池給主播看。</p>
+          </div>
+
           <div class="card">
-            <div class="card-h">💬 許願池</div>
-            <div class="note-text" style="margin-bottom:12px;">可以填許願歌名與許願人。觀眾頁只會顯示歌名。</div>
-            <form id="wishForm" class="wish-form">
-              <input id="wishName" placeholder="許願人（可任意填寫）" maxlength="40" />
-              <input id="wishSong" placeholder="許願歌名" maxlength="120" />
-              <button type="submit" class="btn btn-primary">送出許願</button>
+            <div class="card-h">💗 新增許願</div>
+            <form id="wishForm" class="wish-inline-form">
+              <input id="wishSong" placeholder="輸入想許願的歌名" />
+              <input id="wishUser" placeholder="你的名字 / 暱稱（可空白）" />
+              <button class="btn btn-primary" type="submit">送出到許願池</button>
             </form>
-            <div id="wishMsg" class="note-text wish-msg"></div>
-            <div id="wishList" class="song-grid four-grid compact-grid"></div>
+            <div id="wishMsg" class="note-text mt12"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h">📮 最近許願</div>
+            <div id="wishList" class="list scroll-list"></div>
           </div>
         </div>
-
-        <footer class="footer note-text">觀眾頁｜播放清單更新較快，歌單資料更新較慢，版面已縮短並加深對比，減少卡頓</footer>
       </div>
     </section>
   </main>
 
-<script src="common.js?v=20260306"></script>
-<script src="audience.js?v=20260306b"></script>
+  <script src="common.js?v=audfix4"></script>
+  <script src="audience.js?v=audfix4"></script>
 </body>
 </html>

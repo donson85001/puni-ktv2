@@ -4,18 +4,170 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV OBS</title>
-  <link rel="stylesheet" href="styles.css?v=20260306" />
+  <link rel="stylesheet" href="styles.css?v=obsfix4" />
+  <style>
+    html, body {
+      width: 380px;
+      height: 720px;
+      overflow: hidden;
+    }
+
+    body.obs-body {
+      margin: 0;
+      background: transparent;
+    }
+
+    .obs-root.fixed-obs {
+      width: 380px;
+      height: 720px;
+      padding: 0;
+      min-height: 720px;
+    }
+
+    .obs-card.fixed-obs-card {
+      width: 380px;
+      height: 720px;
+      min-height: 720px;
+      padding: 12px 14px 8px;
+      border-radius: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background: linear-gradient(180deg, rgba(132,136,146,.25), rgba(188,190,195,.25));
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.18),
+        0 12px 28px rgba(0,0,0,.18);
+      backdrop-filter: blur(10px);
+    }
+
+    .obs-head.fixed-obs-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.18);
+    }
+
+    .obs-head-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .obs-head .cute {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,.15));
+      flex: 0 0 auto;
+    }
+
+    .obs-list.fixed-obs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .obs-item.fixed-obs-item {
+      display: grid;
+      grid-template-columns: 38px minmax(0,1fr) 100px;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(76,84,103,.82), rgba(111,120,140,.62));
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+
+    .obs-item.fixed-obs-item.is-current {
+      background: linear-gradient(90deg, rgba(241,110,194,.95), rgba(160,128,248,.94), rgba(111,194,250,.92));
+      border-color: rgba(255,255,255,.28);
+      box-shadow: 0 10px 26px rgba(0,0,0,.14);
+    }
+
+    .obs-item.fixed-obs-item.is-empty,
+    .obs-item.fixed-obs-item.is-error {
+      grid-template-columns: 1fr;
+      height: auto;
+      min-height: 52px;
+      padding: 12px 14px;
+    }
+
+    .obs-num.fixed-obs-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 900;
+      color: #fff;
+      background: rgba(255,255,255,.12);
+    }
+
+    .obs-item.is-current .obs-num.fixed-obs-num {
+      background: rgba(255,255,255,.18);
+    }
+
+    .obs-main.fixed-obs-main,
+    .obs-side.fixed-obs-side {
+      min-width: 0;
+    }
+
+    .obs-title.fixed-obs-title {
+      font-size: 14px;
+      line-height: 1;
+      font-weight: 900;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 1px rgba(0,0,0,.18);
+    }
+
+    .obs-meta.fixed-obs-meta {
+      font-size: 11px;
+      line-height: 1;
+      color: rgba(255,255,255,.95);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: right;
+    }
+
+    .obs-status.fixed-obs-status {
+      margin-top: 4px;
+      text-align: right;
+      font-size: 11px;
+      color: rgba(255,255,255,.9);
+      text-shadow: 0 1px 1px rgba(0,0,0,.14);
+    }
+  </style>
 </head>
 <body class="obs-body">
-  <div class="obs-root">
-    <div class="obs-card">
-      <div class="obs-head" id="header">今日歌單</div>
-      <div class="obs-list" id="list"></div>
-      <div class="obs-status" id="syncText">尚未同步</div>
+  <div class="obs-root fixed-obs">
+    <div class="obs-card fixed-obs-card">
+      <div id="header" class="obs-head fixed-obs-head"></div>
+      <div id="list" class="obs-list fixed-obs-list"></div>
+      <div id="syncText" class="obs-status fixed-obs-status">同步中…</div>
     </div>
   </div>
 
-  <script src="common.js?v=20260306"></script>
-  <script src="obs.js?v=20260306"></script>
+  <script src="common.js?v=obsfix4"></script>
+  <script src="obs.js?v=obsfix4"></script>
 </body>
 </html>

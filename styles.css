@@ -794,3 +794,34 @@ body.obs-body::before{display:none}
   .wish-song{font-size:20px}
   .wish-inline-form{grid-template-columns:1fr}
 }
+/* ===== 全站改成主播播放清單那種粗字體 ===== */
+html,body,
+button,input,select,textarea{
+  font-family:'M PLUS Rounded 1c','Noto Sans TC',system-ui,sans-serif !important;
+  font-weight:900 !important;
+  letter-spacing:.2px;
+}
+
+.title,
+.hero h2,
+.card-h,
+.panel-title,
+.panel-subtitle,
+.row-title,
+.song-title,
+.stat-value,
+.obs-head,
+.obs-title,
+.gate-card .title,
+.nav,
+.btn,
+.chip,
+.pill,
+.badge,
+.queue-song-name,
+.queue-meta-line,
+.wish-song,
+.wish-user{
+  font-family:'M PLUS Rounded 1c','Noto Sans TC',system-ui,sans-serif !important;
+  font-weight:900 !important;
+}

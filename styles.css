@@ -1663,77 +1663,31 @@ body.streamer-page .obs-item.is-current .obs-title-gap{
   height:1px !important;
 }
 
-/* ===== STREAMER FINAL OVERRIDES 2026-03-12 ===== */
-/* 主播頁：直接套用觀眾頁目前播放跑馬燈邏輯 */
-body.streamer-page .queue-row.now-playing-row .queue-main,
-body.streamer-page .queue-row.now-playing-row .queue-title-line,
-body.streamer-page .queue-row.now-playing-row .queue-song-name{
-  min-width:0 !important;
-  max-width:100% !important;
-}
 
-body.streamer-page .queue-row.now-playing-row .queue-title-line{
-  overflow:hidden !important;
-}
-
-body.streamer-page .queue-row.now-playing-row .queue-song-name{
-  flex:1 1 auto !important;
-  width:100% !important;
-  display:block !important;
-  position:relative !important;
-  overflow:hidden !important;
-  white-space:nowrap !important;
-  text-overflow:clip !important;
-  line-height:1.2 !important;
-  min-height:1.2em !important;
-}
-
-body.streamer-page .queue-row.now-playing-row .queue-song-name[data-marquee="on"]{
-  min-height:1.25em !important;
-}
-
-body.streamer-page .queue-row.now-playing-row .queue-song-track{
-  position:absolute !important;
-  left:0 !important;
-  top:50% !important;
-  display:inline-flex !important;
-  align-items:center !important;
-  white-space:nowrap !important;
-  pointer-events:none !important;
-  will-change:transform !important;
-  transform:translate3d(var(--mq-x, 0px), -50%, 0) !important;
-  animation:none !important;
-  max-width:none !important;
-}
-
-body.streamer-page .queue-row.now-playing-row .queue-song-track .queue-song-text{
-  display:inline-block !important;
-  white-space:nowrap !important;
-  min-width:max-content !important;
-  max-width:none !important;
-  flex:0 0 auto !important;
-  font-size:inherit !important;
-}
-
-body.streamer-page .queue-row.now-playing-row .queue-song-gap{
-  display:none !important;
-}
-
-/* OBS 也維持 JS 控制，不吃舊動畫 */
-body.streamer-page .obs-item.is-current .obs-main,
-body.streamer-page .obs-item.is-current .obs-title{
+/* ===== OBS ULTRA SMOOTH FINAL OVERRIDES ===== */
+body.obs-body .obs-item,
+body.obs-body .obs-item .obs-main,
+body.obs-body .obs-item .obs-title{
   min-width:0 !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title{
+body.obs-body .obs-item .obs-title{
   position:relative !important;
   display:block !important;
   overflow:hidden !important;
   white-space:nowrap !important;
   text-overflow:clip !important;
+  line-height:1.05 !important;
+  contain:layout paint style !important;
+  backface-visibility:hidden !important;
+  transform:translateZ(0) !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title-track{
+body.obs-body .obs-item.is-current .obs-title[data-marquee="on"]{
+  min-height:1.05em !important;
+}
+
+body.obs-body .obs-item.is-current .obs-title-track{
   position:absolute !important;
   left:0 !important;
   top:50% !important;
@@ -1744,87 +1698,39 @@ body.streamer-page .obs-item.is-current .obs-title-track{
   will-change:transform !important;
   transform:translate3d(var(--obs-mq-x, 0px), -50%, 0) !important;
   animation:none !important;
+  backface-visibility:hidden !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title-track .obs-title-text{
+body.obs-body .obs-item.is-current .obs-title-track .obs-title-text{
   display:inline-block !important;
   white-space:nowrap !important;
   min-width:max-content !important;
   max-width:none !important;
   flex:0 0 auto !important;
+  backface-visibility:hidden !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title-gap{
-  display:none !important;
+body.obs-body .obs-item.is-current .obs-title-gap{
+  display:inline-block !important;
+  width:12px !important;
+  min-width:12px !important;
+  flex:0 0 12px !important;
+  height:1px !important;
 }
 
-/* ===== 主播 Queue 按鈕質感實心版：移除透明度感 ===== */
-body.streamer-page .queue-actions .btn,
-body.streamer-page .queue-actions .btn-mini{
-  border-width:1px !important;
-  border-style:solid !important;
-  color:#fff !important;
-  box-shadow:0 12px 24px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.14) !important;
+/* 徹底停用舊版 OBS keyframes */
+body.obs-body .obs-item.is-current .obs-title-track,
+body.obs-body .obs-item.is-current .obs-title.obs-marquee-holder,
+body.obs-body .obs-item.is-current .obs-title.is-marquee-active{
+  animation:none !important;
 }
 
-/* 播放按鈕：彩虹 */
-body.streamer-page .queue-actions [data-current]{
-  background:linear-gradient(135deg,#ff5fb2 0%, #a86cff 48%, #5cc8ff 100%) !important;
-  border-color:#ffd0ea !important;
-  box-shadow:0 12px 26px rgba(171,130,255,.34), inset 0 1px 0 rgba(255,255,255,.2) !important;
+@keyframes obsTitleMarqueeEnterLeave {
+  from { transform:translate3d(0,-50%,0); }
+  to { transform:translate3d(0,-50%,0); }
 }
 
-body.streamer-page .queue-actions [data-current]:hover:not(:disabled){
-  filter:brightness(1.06) !important;
-}
-
-body.streamer-page .queue-actions [data-current]:disabled{
-  opacity:1 !important;
-  filter:brightness(.92) !important;
-  cursor:default !important;
-}
-
-/* YT：質感紅 */
-body.streamer-page .queue-actions .btn-yt,
-body.streamer-page .queue-actions [data-yt]{
-  background:linear-gradient(135deg,#b31217 0%, #e52d27 55%, #7f1016 100%) !important;
-  border-color:#ffb3b3 !important;
-}
-
-/* 上交換：質感橙 */
-body.streamer-page .queue-actions [data-up]{
-  background:linear-gradient(135deg,#d96a00 0%, #ff9a1f 56%, #9e4700 100%) !important;
-  border-color:#ffd19a !important;
-}
-
-/* 下交換：質感黃 */
-body.streamer-page .queue-actions [data-down]{
-  background:linear-gradient(135deg,#b88a00 0%, #ffd54a 56%, #8a6400 100%) !important;
-  border-color:#fff0a8 !important;
-  color:#2d2200 !important;
-  text-shadow:none !important;
-}
-
-/* 單首 +1：維持原本高質感紫 */
-body.streamer-page .queue-actions [data-played],
-#bulkPlayedBtn,
-body.streamer-page [data-songid]{
-  background:linear-gradient(135deg,#54228a 0%, #783abb 52%, #351965 100%) !important;
-  border-color:#cdb1ff !important;
-}
-
-/* 移除：改成質感藍 */
-body.streamer-page .queue-actions [data-remove],
-body.streamer-page #bulkRemoveBtn,
-body.streamer-page .btn-danger{
-  background:linear-gradient(135deg,#0f5bd8 0%, #3ba0ff 56%, #0a3b8f 100%) !important;
-  border-color:#b7dcff !important;
-}
-
-body.streamer-page .queue-actions .btn:hover,
-body.streamer-page #bulkPlayedBtn:hover,
-body.streamer-page #bulkRemoveBtn:hover,
-body.streamer-page [data-songid]:hover{
-  transform:translateY(-1px) !important;
-  filter:brightness(1.05) !important;
+@keyframes obsNowPlayingMarquee {
+  from { transform:translate3d(0,-50%,0); }
+  to { transform:translate3d(0,-50%,0); }
 }

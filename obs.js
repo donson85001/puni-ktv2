@@ -4,7 +4,7 @@ const headerEl = document.getElementById('header');
 const bodyEl = document.body;
 const params = new URLSearchParams(location.search);
 const showTitle = params.get('title') !== '0';
-const OBS_MARQUEE_GAP = 48;
+const OBS_MARQUEE_GAP = 12;
 const page = Math.max(1, Math.min(2, Number(params.get('page') || '1')));
 const PAGE_SIZE = 15;
 const VALID_LIMITS = [5, 10, 15, 20, 25, 30];
@@ -212,38 +212,40 @@ function runObsMarquee(holder) {
   const plainText = holder.querySelector('.obs-title-text');
   if (!plainText) return false;
 
-  const holderWidth = Math.ceil(holder.getBoundingClientRect().width || holder.clientWidth || 0);
-  const textWidth = Math.ceil(plainText.scrollWidth || plainText.getBoundingClientRect().width || 0);
+  const holderWidth = holder.clientWidth || holder.getBoundingClientRect().width || 0;
+  const textWidth = plainText.scrollWidth || plainText.getBoundingClientRect().width || 0;
   if (!holderWidth || !textWidth) return false;
 
   const originalText = String(holder.dataset.marqueeText || plainText.textContent || '').trim();
-  const copies = 3;
 
   holder.classList.add('obs-marquee-holder');
   holder.setAttribute('data-marquee', 'on');
-  const segmentHtml = `
-      <span class="obs-title-text">${esc(originalText)}</span>
-      <span class="obs-title-gap" aria-hidden="true"></span>
-  `;
   holder.innerHTML = `
     <span class="obs-title-track">
-      ${segmentHtml.repeat(copies - 1)}
+      <span class="obs-title-text">${esc(originalText)}</span>
+      <span class="obs-title-gap" aria-hidden="true"></span>
       <span class="obs-title-text" aria-hidden="true">${esc(originalText)}</span>
     </span>
   `;
 
-  const gap = 34;
-  const speed = 54;
-  const gapNodes = holder.querySelectorAll('.obs-title-gap');
-  gapNodes.forEach(node => {
-    node.style.width = `${gap}px`;
-    node.style.flex = `0 0 ${gap}px`;
-  });
+  const track = holder.querySelector('.obs-title-track');
+  const firstText = track?.querySelector('.obs-title-text');
+  const gapNode = holder.querySelector('.obs-title-gap');
+  if (!track || !firstText || !gapNode) return false;
+
+  const gap = OBS_MARQUEE_GAP;
+  const speed = 36;
+
+  gapNode.style.width = `${gap}px`;
+  gapNode.style.flex = `0 0 ${gap}px`;
+
+  const firstTextWidth = firstText.scrollWidth || firstText.getBoundingClientRect().width || 0;
+  const segmentWidth = firstTextWidth + gap;
+  if (!segmentWidth) return false;
 
   let offset = 0;
   let lastTs = null;
   let running = true;
-  const segmentWidth = textWidth + gap;
 
   function tick(ts) {
     if (!running) return;
@@ -253,7 +255,8 @@ function runObsMarquee(holder) {
     lastTs = ts;
 
     offset -= speed * dt;
-    while (offset <= -segmentWidth) {
+
+    if (offset <= -segmentWidth) {
       offset += segmentWidth;
     }
 
@@ -311,6 +314,5 @@ function scheduleObsMarqueeRefresh(scope=document) {
 }
 
 window.addEventListener('resize', debounce(() => {
-  fitObsTitles(listEl);
-  applyObsNowPlayingMarquee(listEl);
+  scheduleObsMarqueeRefresh(listEl);
 }, 120));

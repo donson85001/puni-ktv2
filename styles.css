@@ -1578,93 +1578,60 @@ body.streamer-page #page-songs #catPanel{
 }
 
 
-/* ===== STREAMER MARQUEE FINAL CLEAN OVERRIDES ===== */
-body.streamer-page .queue-row.now-playing-row .queue-song-name,
-body.streamer-page .queue-row.now-playing-row .queue-title-line,
-body.streamer-page .queue-row.now-playing-row .queue-main{
-  min-width:0 !important;
+/* ===== FINAL STREAMER QUEUE BUTTON RESTORE ===== */
+body.streamer-page #page-queue .queue-actions .btn,
+body.streamer-page #page-queue .queue-actions .btn-mini{
+  border-width:1px !important;
+  border-style:solid !important;
+  color:#fff !important;
+  opacity:1 !important;
+  box-shadow:0 10px 22px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.16) !important;
+  backdrop-filter:none !important;
 }
 
-body.streamer-page .queue-row.now-playing-row .queue-song-name{
-  position:relative !important;
-  display:block !important;
-  overflow:hidden !important;
-  white-space:nowrap !important;
-  text-overflow:clip !important;
-  line-height:1.12 !important;
+body.streamer-page #page-queue .queue-actions [data-current]{
+  background:linear-gradient(90deg,#ef72c5 0%, #ab82ff 50%, #73c6ff 100%) !important;
+  border-color:rgba(255,255,255,.34) !important;
 }
 
-body.streamer-page .queue-row.now-playing-row .queue-song-track{
-  position:absolute !important;
-  left:0 !important;
-  top:50% !important;
-  display:inline-flex !important;
-  align-items:center !important;
-  white-space:nowrap !important;
-  pointer-events:none !important;
-  will-change:transform !important;
-  transform:translate3d(var(--mq-x, 0px), -50%, 0) !important;
-  animation:none !important;
+body.streamer-page #page-queue .queue-actions [data-yt]{
+  background:linear-gradient(135deg,#8b1010 0%, #c71f1f 45%, #f04a3a 100%) !important;
+  border-color:rgba(255,214,214,.28) !important;
 }
 
-body.streamer-page .queue-row.now-playing-row .queue-song-track .queue-song-text{
-  display:inline-block !important;
-  white-space:nowrap !important;
-  min-width:max-content !important;
-  flex:0 0 auto !important;
+body.streamer-page #page-queue .queue-actions [data-up]{
+  background:linear-gradient(135deg,#8a3d00 0%, #c9680f 48%, #f2a246 100%) !important;
+  border-color:rgba(255,222,183,.28) !important;
 }
 
-body.streamer-page .queue-row.now-playing-row .queue-song-gap{
-  display:inline-block !important;
-  width:12px !important;
-  min-width:12px !important;
-  flex:0 0 12px !important;
-  height:1px !important;
+body.streamer-page #page-queue .queue-actions [data-down]{
+  background:linear-gradient(135deg,#8a6b00 0%, #c99d10 48%, #f1cc46 100%) !important;
+  border-color:rgba(255,242,182,.30) !important;
+  color:#fff !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title,
-body.streamer-page .obs-item.is-current .obs-main{
-  min-width:0 !important;
+body.streamer-page #page-queue .queue-actions [data-played]{
+  background:linear-gradient(135deg,#54228a 0%, #783abb 52%, #351965 100%) !important;
+  border-color:rgba(205,177,255,.30) !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title{
-  position:relative !important;
-  display:block !important;
-  overflow:hidden !important;
-  white-space:nowrap !important;
-  text-overflow:clip !important;
+body.streamer-page #page-queue .queue-actions [data-remove]{
+  background:linear-gradient(135deg,#0f3e86 0%, #1f62c8 48%, #51a5ff 100%) !important;
+  border-color:rgba(191,224,255,.30) !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title-track{
-  position:absolute !important;
-  left:0 !important;
-  top:50% !important;
-  display:inline-flex !important;
-  align-items:center !important;
-  white-space:nowrap !important;
-  pointer-events:none !important;
-  will-change:transform !important;
-  transform:translate3d(var(--obs-mq-x, 0px), -50%, 0) !important;
-  animation:none !important;
+body.streamer-page #page-queue .queue-actions [data-current]:disabled{
+  filter:saturate(.95) brightness(.96) !important;
+  opacity:1 !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title-track .obs-title-text{
-  display:inline-block !important;
-  white-space:nowrap !important;
-  min-width:max-content !important;
-  flex:0 0 auto !important;
+body.streamer-page #page-queue .queue-actions .btn:hover,
+body.streamer-page #page-queue .queue-actions .btn-mini:hover{
+  transform:translateY(-1px) !important;
+  filter:brightness(1.04) !important;
 }
 
-body.streamer-page .obs-item.is-current .obs-title-gap{
-  display:inline-block !important;
-  width:10px !important;
-  min-width:10px !important;
-  flex:0 0 10px !important;
-  height:1px !important;
-}
-
-
-/* ===== OBS ULTRA SMOOTH FINAL OVERRIDES ===== */
+/* ===== FINAL OBS MARQUEE SMOOTH OVERRIDE ===== */
 body.obs-body .obs-item,
 body.obs-body .obs-item .obs-main,
 body.obs-body .obs-item .obs-title{
@@ -1677,14 +1644,9 @@ body.obs-body .obs-item .obs-title{
   overflow:hidden !important;
   white-space:nowrap !important;
   text-overflow:clip !important;
-  line-height:1.05 !important;
   contain:layout paint style !important;
   backface-visibility:hidden !important;
   transform:translateZ(0) !important;
-}
-
-body.obs-body .obs-item.is-current .obs-title[data-marquee="on"]{
-  min-height:1.05em !important;
 }
 
 body.obs-body .obs-item.is-current .obs-title-track{
@@ -1705,32 +1667,21 @@ body.obs-body .obs-item.is-current .obs-title-track .obs-title-text{
   display:inline-block !important;
   white-space:nowrap !important;
   min-width:max-content !important;
-  max-width:none !important;
   flex:0 0 auto !important;
-  backface-visibility:hidden !important;
 }
 
 body.obs-body .obs-item.is-current .obs-title-gap{
   display:inline-block !important;
-  width:12px !important;
-  min-width:12px !important;
-  flex:0 0 12px !important;
+  width:2px !important;
+  min-width:2px !important;
+  flex:0 0 2px !important;
   height:1px !important;
 }
 
-/* 徹底停用舊版 OBS keyframes */
+body.obs-body .obs-item.is-current .obs-title,
 body.obs-body .obs-item.is-current .obs-title-track,
 body.obs-body .obs-item.is-current .obs-title.obs-marquee-holder,
 body.obs-body .obs-item.is-current .obs-title.is-marquee-active{
   animation:none !important;
 }
 
-@keyframes obsTitleMarqueeEnterLeave {
-  from { transform:translate3d(0,-50%,0); }
-  to { transform:translate3d(0,-50%,0); }
-}
-
-@keyframes obsNowPlayingMarquee {
-  from { transform:translate3d(0,-50%,0); }
-  to { transform:translate3d(0,-50%,0); }
-}

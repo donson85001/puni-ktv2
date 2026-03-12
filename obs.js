@@ -4,7 +4,7 @@ const headerEl = document.getElementById('header');
 const bodyEl = document.body;
 const params = new URLSearchParams(location.search);
 const showTitle = params.get('title') !== '0';
-const OBS_MARQUEE_GAP = 12;
+const OBS_MARQUEE_GAP = 2;
 const page = Math.max(1, Math.min(2, Number(params.get('page') || '1')));
 const PAGE_SIZE = 15;
 const VALID_LIMITS = [5, 10, 15, 20, 25, 30];
@@ -217,6 +217,8 @@ function runObsMarquee(holder) {
   if (!holderWidth || !textWidth) return false;
 
   const originalText = String(holder.dataset.marqueeText || plainText.textContent || '').trim();
+  const gap = 2;
+  const speed = 32;
 
   holder.classList.add('obs-marquee-holder');
   holder.setAttribute('data-marquee', 'on');
@@ -225,21 +227,23 @@ function runObsMarquee(holder) {
       <span class="obs-title-text">${esc(originalText)}</span>
       <span class="obs-title-gap" aria-hidden="true"></span>
       <span class="obs-title-text" aria-hidden="true">${esc(originalText)}</span>
+      <span class="obs-title-gap" aria-hidden="true"></span>
+      <span class="obs-title-text" aria-hidden="true">${esc(originalText)}</span>
     </span>
   `;
 
   const track = holder.querySelector('.obs-title-track');
-  const firstText = track?.querySelector('.obs-title-text');
-  const gapNode = holder.querySelector('.obs-title-gap');
-  if (!track || !firstText || !gapNode) return false;
+  const gapNodes = holder.querySelectorAll('.obs-title-gap');
+  const textNodes = holder.querySelectorAll('.obs-title-text');
+  if (!track || !gapNodes.length || !textNodes.length) return false;
 
-  const gap = OBS_MARQUEE_GAP;
-  const speed = 36;
+  gapNodes.forEach(node => {
+    node.style.width = `${gap}px`;
+    node.style.minWidth = `${gap}px`;
+    node.style.flex = `0 0 ${gap}px`;
+  });
 
-  gapNode.style.width = `${gap}px`;
-  gapNode.style.flex = `0 0 ${gap}px`;
-
-  const firstTextWidth = firstText.scrollWidth || firstText.getBoundingClientRect().width || 0;
+  const firstTextWidth = textNodes[0].scrollWidth || textNodes[0].getBoundingClientRect().width || textWidth;
   const segmentWidth = firstTextWidth + gap;
   if (!segmentWidth) return false;
 
@@ -314,5 +318,6 @@ function scheduleObsMarqueeRefresh(scope=document) {
 }
 
 window.addEventListener('resize', debounce(() => {
-  scheduleObsMarqueeRefresh(listEl);
+  fitObsTitles(listEl);
+  applyObsNowPlayingMarquee(listEl);
 }, 120));

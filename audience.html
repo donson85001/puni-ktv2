@@ -4,9 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV（觀眾）</title>
-  <link rel="stylesheet" href="styles.css?v=audfix4" />
+  <link rel="stylesheet" href="styles.css?v=20260312a" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="audience-page">
   <header class="topbar">
     <div class="brand">
       <div class="logo"><img src="cute.gif" alt="cute" /></div>
@@ -59,15 +62,9 @@
             </div>
           </div>
 
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-h">💬 點歌方式</div>
-              <div class="note-text">站內只提供查歌。想點歌請直接到聊天室使用 <b>!點歌</b>。</div>
-            </div>
-            <div class="card">
-              <div class="card-h">🎤 目前播放清單</div>
-              <div id="homeQueue" class="list scroll-list home-queue"></div>
-            </div>
+          <div class="card audience-queue-card">
+            <div class="card-h">🎤 目前播放清單</div>
+            <div id="homeQueue" class="list scroll-list home-queue audience-home-queue"></div>
           </div>
         </div>
 
@@ -85,7 +82,7 @@
             </div>
           </div>
 
-          <div id="catPanel" class="card">
+          <div id="catPanel" class="category-wrap">
             <div class="panel-title simple">分類</div>
             <div id="mainCatChips" class="chip-grid"></div>
             <div id="catChips" class="chip-grid mt12"></div>
@@ -129,7 +126,7 @@
     </section>
   </main>
 
-  <script src="common.js?v=audfix4"></script>
-  <script src="audience.js?v=audfix4"></script>
+  <script src="common.js?v=20260312a"></script>
+  <script src="audience.js?v=20260312a"></script>
 </body>
 </html>

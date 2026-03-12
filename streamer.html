@@ -4,9 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>噗妮KTV（主播）</title>
-  <link rel="stylesheet" href="styles.css?v=wishfix1" />
+  <link rel="stylesheet" href="styles.css?v=20260312-stable" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="streamer-page">
 <div id="gate" class="gate">
   <div class="gate-card">
     <div class="title">主播登入</div>
@@ -99,7 +102,7 @@
         <div class="page hidden" id="page-songs">
           <div class="hero"><h2>歌單</h2><p>支援分類與搜尋，點一下就能加入 Queue。</p></div>
           <div class="toolbar"><div class="search"><input id="songSearch" placeholder="搜尋歌名 / 歌手 / 子標籤" /><button id="songSearchBtn" class="btn btn-primary">搜尋</button><button id="toggleCats" class="btn">顯示 / 隱藏 分類</button></div></div>
-          <div id="catPanel" class="card"><div class="panel-title simple">分類</div><div id="mainCatChips" class="chip-grid"></div><div id="catChips" class="chip-grid mt12"></div></div>
+          <div id="catPanel" class="category-wrap"><div class="panel-title simple">分類</div><div id="mainCatChips" class="chip-grid"></div><div id="catChips" class="chip-grid mt12"></div></div>
           <div id="songGrid" class="song-grid"></div>
         </div>
 
@@ -121,7 +124,7 @@
   </main>
 </div>
 
-<script src="common.js?v=wishfix1"></script>
-<script src="streamer.js?v=wishfix1"></script>
+<script src="common.js?v=20260312a"></script>
+<script src="streamer.js?v=20260312-stable"></script>
 </body>
 </html>

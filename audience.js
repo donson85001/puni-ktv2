@@ -1,3 +1,5 @@
+function normalizeWishSong(s){return String(s||'').replace(/　/g,' ').replace(/\s+/g,' ').trim().toLowerCase();}
+
 let songs = [];
 let queue = [];
 let wishList = [];
@@ -6,13 +8,14 @@ let currentPage = 'queue';
 let mainCat = '女歌手';
 let subCat = '全部';
 let leaderboardPage = 1;
+let lastQueueSignature = '';
 const MAIN_CATS = ['女歌手','男歌手','其他'];
 const OTHER_SUBTAGS = ['日','英','韓','Rap','情歌對唱','嗨歌/怪歌','舞蹈'];
 const MEDALS = ['🥇','🥈','🥉'];
 const PAGE_SIZE = 24;
 const $ = id => document.getElementById(id);
 
-init();
+document.addEventListener('DOMContentLoaded',init);
 
 function init(){
   document.querySelectorAll('.nav').forEach(btn => btn.onclick = () => {
@@ -61,6 +64,19 @@ function queueState(q, idx){
   if(idx === 0 && !hasCurrent) return 'current';
 
   return 'pending';
+}
+function getQueueSignature(list, currentId){
+  return JSON.stringify({
+    currentId: String(currentId || ''),
+    items: (list || []).map(q => ({
+      id: String(q.id || ''),
+      title: String(q.title || ''),
+      artist: String(q.artist || ''),
+      by: String(q.by || ''),
+      status: String(q.status || ''),
+      isCurrent: !!q.isCurrent
+    }))
+  });
 }
 
 function renderCurrentPage(){
@@ -138,6 +154,173 @@ function rebuildSubtagChips(){
   });
 }
 
+
+function fitQueueSongNames(scope=document){
+  const rows = scope.querySelectorAll('.queue-row');
+
+  rows.forEach(row=>{
+    const holder = row.querySelector('.queue-song-name');
+    const text = row.querySelector('.queue-song-text');
+    if(!holder || !text) return;
+
+    holder.style.removeProperty('--mq-x');
+    text.style.removeProperty('font-size');
+    text.style.whiteSpace = 'nowrap';
+
+    if(row.classList.contains('now-playing-row')) return;
+
+    let size = 24;
+    const lenClass = holder.classList.contains('qlen-3') ? 'qlen-3' : holder.classList.contains('qlen-2') ? 'qlen-2' : '';
+    if(lenClass === 'qlen-2') size = 21;
+    if(lenClass === 'qlen-3') size = 18;
+
+    const min = 11;
+    text.style.fontSize = size + 'px';
+
+    while(text.scrollWidth > holder.clientWidth && size > min){
+      size -= 1;
+      text.style.fontSize = size + 'px';
+    }
+  });
+}
+
+function stopMarqueeHolder(holder){
+  if(!holder) return;
+
+  if(holder._stopMarquee){
+    holder._stopMarquee();
+    holder._stopMarquee = null;
+  }
+
+  if(holder._mqRaf){
+    cancelAnimationFrame(holder._mqRaf);
+    holder._mqRaf = null;
+  }
+
+  holder.removeAttribute('data-marquee');
+  holder.classList.remove('is-marquee-active');
+
+  const originalText = String(holder.dataset.marqueeText || holder.textContent || '').trim();
+  holder.style.removeProperty('--mq-x');
+  holder.innerHTML = `<span class="queue-song-text">${esc(originalText)}</span>`;
+}
+
+function runHorizontalMarquee(holder, options){
+  if(!holder) return false;
+
+  const {
+    textClass,
+    speed = 70,
+    varName = '--mq-x',
+    onlyWhenOverflow = false,
+  } = options || {};
+
+  const plainText = holder.querySelector(`.${textClass}`);
+  if(!plainText) return false;
+
+  const holderWidth = Math.ceil(holder.clientWidth || 0);
+  const textWidth = Math.ceil(plainText.scrollWidth || 0);
+
+  if(!holderWidth || !textWidth) return false;
+  if(onlyWhenOverflow && textWidth <= holderWidth) return false;
+
+  const originalText = String(holder.dataset.marqueeText || plainText.textContent || '').trim();
+
+  holder.classList.add('is-marquee-active');
+  holder.setAttribute('data-marquee', 'on');
+
+  // 改成只放一份文字，完整滑完再重來
+  holder.innerHTML = `
+    <span class="queue-song-track">
+      <span class="${textClass}">${esc(originalText)}</span>
+    </span>
+  `;
+
+  const track = holder.querySelector('.queue-song-track');
+  if(!track) return false;
+
+  let offset = holderWidth;      // 從容器右邊外面開始
+  let lastTs = null;
+  let running = true;
+  const resetPoint = -textWidth; // 整條文字完全離開左邊才重置
+
+  function tick(ts){
+    if(!running) return;
+
+    if(lastTs == null) lastTs = ts;
+    const dt = Math.max(0, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    offset -= speed * dt;
+
+    if(offset <= resetPoint){
+      offset = holderWidth;
+    }
+
+    holder.style.setProperty(varName, `${offset}px`);
+    holder._mqRaf = requestAnimationFrame(tick);
+  }
+
+  holder.style.setProperty(varName, `${offset}px`);
+  holder._mqRaf = requestAnimationFrame(tick);
+
+  holder._stopMarquee = () => {
+    running = false;
+    if(holder._mqRaf){
+      cancelAnimationFrame(holder._mqRaf);
+      holder._mqRaf = null;
+    }
+  };
+
+  return true;
+}
+
+function applyNowPlayingMarquee(scope=document){
+  const rows = scope.querySelectorAll('.queue-row');
+
+  rows.forEach(row=>{
+    const holder = row.querySelector('.queue-song-name');
+    if(!holder) return;
+
+    const originalText = String(row.dataset.title || holder.textContent || '').trim();
+    holder.dataset.marqueeText = originalText;
+    stopMarqueeHolder(holder);
+
+    if(!row.classList.contains('now-playing-row')) return;
+
+runHorizontalMarquee(holder, {
+  textClass: 'queue-song-text',
+  speed: 70,
+  varName: '--mq-x',
+  onlyWhenOverflow: false,
+});
+  });
+}
+
+function scheduleMarqueeRefresh(scope=document){
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      fitQueueSongNames(scope);
+      applyNowPlayingMarquee(scope);
+    });
+  });
+
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(()=>{
+      requestAnimationFrame(()=>{
+        fitQueueSongNames(scope);
+        applyNowPlayingMarquee(scope);
+      });
+    }).catch(()=>{});
+  }
+}
+
+window.addEventListener('resize', debounce(()=>{
+  fitQueueSongNames(document);
+  applyNowPlayingMarquee(document);
+}, 120));
+
+
 function filterSongsByCategory(list){
   let out = list.filter(s => s.category === mainCat);
 
@@ -180,13 +363,20 @@ function renderQueue(){
     const state = queueState(q,i);
     const badge = state === 'current' ? '<span class="badge badge-now">▶ 現在播放</span>' : '';
 
+    const rawTitle = String(q.title || '');
+    const titleLenClass =
+      rawTitle.length >= 18 ? 'qlen-3' :
+      rawTitle.length >= 11 ? 'qlen-2' : '';
+
     return `
-      <div class="queue-row ${state === 'current' ? 'now-playing-row' : ''}">
+      <div class="queue-row ${state === 'current' ? 'now-playing-row' : ''}" data-title="${esc(rawTitle)}">
         <div class="queue-rank">${i+1}</div>
         <div class="queue-main">
           <div class="queue-title-line">
             ${badge}
-            <span class="queue-song-name">${esc(q.title || '')}</span>
+            <span class="queue-song-name ${titleLenClass}">
+              <span class="queue-song-text">${esc(rawTitle)}</span>
+            </span>
           </div>
           <div class="queue-meta-line">
             ${esc(q.artist || '')}${q.by ? ' · 點歌：' + esc(q.by) : ''}
@@ -195,6 +385,10 @@ function renderQueue(){
       </div>
     `;
   }).join('');
+
+  fitQueueSongNames(box);
+  scheduleMarqueeRefresh(box);
+lastQueueSignature = getQueueSignature(queue, currentQueueId);
 }
 
 function renderSongs(){
@@ -305,34 +499,43 @@ function renderWishList(){
 
 async function submitWish(e){
   e.preventDefault();
-
   const song = ($('wishSong')?.value || '').trim();
   const user = ($('wishUser')?.value || '').trim();
+  if(!song){ setWishMsg('請先輸入歌名'); return; }
 
-  if(!song){
-    setWishMsg('請先輸入歌名');
-    return;
-  }
+  const normalized = normalizeWishSong(song);
+  const duplicated = (wishList||[]).some(w=>normalizeWishSong(w.song)===normalized);
+  if(duplicated){ setWishMsg('許願池已有這首歌囉 💡'); return; }
 
   try{
     setWishMsg('送出中…');
-    await api('wish_add', { song, user });
-    $('wishSong').value = '';
-    $('wishUser').value = '';
+    await api('wish_add',{song,user});
+    $('wishSong').value=''; $('wishUser').value='';
     setWishMsg('已送到許願池 💖');
     await syncSlow(true);
   }catch(err){
-    setWishMsg('送出失敗：' + (err?.message || String(err)));
+    setWishMsg('送出失敗：'+(err?.message||String(err)));
   }
 }
 
 async function syncFast(force){
   try{
     const res = await api('queue');
-    queue = res.data || [];
-    currentQueueId = String(res.currentQueueId || currentQueueId || '');
 
-    if(force || currentPage === 'queue') renderQueue();
+    const newQueue = res.data || [];
+    const newCurrentQueueId = String(res.currentQueueId || '');
+
+    const newSignature = getQueueSignature(newQueue, newCurrentQueueId);
+    const changed = newSignature !== lastQueueSignature;
+
+    queue = newQueue;
+    currentQueueId = newCurrentQueueId || currentQueueId || '';
+
+    if(force || (currentPage === 'queue' && changed)){
+      renderQueue();
+      lastQueueSignature = newSignature;
+    }
+
     setStatus('已同步：' + new Date().toLocaleTimeString());
   }catch(e){
     setStatus('同步失敗：' + (e?.message || String(e)));

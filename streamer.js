@@ -1,4 +1,6 @@
 let currentQueueId = '';
+let lastQueueFingerprint = '';
+let lastRenderedCurrentQueueId = '';
 let authed = false;
 let currentPage = 'queue';
 let songs = [];
@@ -8,6 +10,7 @@ let settings = { obs_limit: 30 };
 let mainCat = '女歌手';
 let subCat = '全部';
 let leaderboardPage = 1;
+
 const MAIN_CATS = ['女歌手','男歌手','其他'];
 const OTHER_SUBTAGS = ['日','英','韓','Rap','情歌對唱','嗨歌/怪歌','舞蹈'];
 const OBS_LIMITS = [5,10,15,20,25,30];
@@ -243,12 +246,229 @@ function wireSongButtons(scope=document){
   });
 }
 
+function fitQueueSongNames(scope=document){
+  const rows = scope.querySelectorAll('.queue-row');
+
+  rows.forEach(row=>{
+    const holder = row.querySelector('.queue-song-name');
+    const text = row.querySelector('.queue-song-text');
+    if(!holder || !text) return;
+
+    holder.classList.remove('is-marquee-active');
+    holder.style.removeProperty('--mq-x');
+    text.style.removeProperty('font-size');
+    text.style.whiteSpace = 'nowrap';
+
+    if(row.classList.contains('now-playing-row')) return;
+
+    let size = 26;
+    const min = 12;
+    text.style.fontSize = size + 'px';
+
+    while(text.scrollWidth > holder.clientWidth && size > min){
+      size -= 1;
+      text.style.fontSize = size + 'px';
+    }
+  });
+}
+
+function stopMarqueeHolder(holder, baseClass){
+  if(!holder) return;
+
+  if(holder._stopMarquee){
+    holder._stopMarquee();
+    holder._stopMarquee = null;
+  }
+
+  if(holder._mqRaf){
+    cancelAnimationFrame(holder._mqRaf);
+    holder._mqRaf = null;
+  }
+
+  holder.removeAttribute('data-marquee');
+  holder.classList.remove('is-marquee-active', 'marquee-holder', 'obs-marquee-holder');
+  holder.style.removeProperty('--mq-x');
+  holder.style.removeProperty('--obs-mq-x');
+
+  if(baseClass === 'queue-song-text'){
+    const originalText = String(holder.dataset.marqueeText || holder.textContent || '').trim();
+    holder.innerHTML = `<span class="queue-song-text">${esc(originalText)}</span>`;
+  }else if(baseClass === 'obs-title-text'){
+    const originalText = String(holder.dataset.marqueeText || holder.textContent || '').trim();
+    holder.innerHTML = `<span class="obs-title-text">${esc(originalText)}</span>`;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function runHorizontalMarquee(holder, options){
+  if(!holder) return false;
+
+  const {
+    textClass,
+    trackClass = 'queue-song-track',
+    speed = 70,
+    varName = '--mq-x',
+    onlyWhenOverflow = false,
+  } = options || {};
+
+  const plainText = holder.querySelector(`.${textClass}`);
+  if(!plainText) return false;
+
+  const holderWidth = Math.ceil(holder.clientWidth || 0);
+  const textWidth = Math.ceil(plainText.scrollWidth || 0);
+
+  if(!holderWidth || !textWidth) return false;
+  if(onlyWhenOverflow && textWidth <= holderWidth) return false;
+
+  const originalText = String(holder.dataset.marqueeText || plainText.textContent || '').trim();
+
+  holder.classList.add('is-marquee-active');
+  holder.setAttribute('data-marquee', 'on');
+
+  holder.innerHTML = `
+    <span class="${trackClass}">
+      <span class="${textClass}">${esc(originalText)}</span>
+    </span>
+  `;
+
+  const track = holder.querySelector(`.${trackClass}`);
+  if(!track) return false;
+
+  let offset = holderWidth;
+  let lastTs = null;
+  let running = true;
+  const resetPoint = -textWidth;
+
+  function tick(ts){
+    if(!running) return;
+
+    if(lastTs == null) lastTs = ts;
+    const dt = Math.max(0, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    offset -= speed * dt;
+
+    if(offset <= resetPoint){
+      offset = holderWidth;
+    }
+
+    holder.style.setProperty(varName, `${offset}px`);
+    holder._mqRaf = requestAnimationFrame(tick);
+  }
+
+  holder.style.setProperty(varName, `${offset}px`);
+  holder._mqRaf = requestAnimationFrame(tick);
+
+  holder._stopMarquee = () => {
+    running = false;
+    if(holder._mqRaf){
+      cancelAnimationFrame(holder._mqRaf);
+      holder._mqRaf = null;
+    }
+  };
+
+  return true;
+}
+
+function applyNowPlayingMarquee(scope=document){
+  const rows = scope.querySelectorAll('.queue-row');
+
+  rows.forEach(row=>{
+    const holder = row.querySelector('.queue-song-name');
+    if(!holder) return;
+
+    const originalText = String(row.dataset.title || holder.textContent || '').trim();
+    holder.dataset.marqueeText = originalText;
+    stopMarqueeHolder(holder, 'queue-song-text');
+
+    if(!row.classList.contains('now-playing-row')) return;
+
+    runHorizontalMarquee(holder, {
+      textClass: 'queue-song-text',
+      trackClass: 'queue-song-track',
+      speed: 70,
+      varName: '--mq-x',
+      onlyWhenOverflow: false,
+    });
+  });
+}
+
+function applyObsTitleMarquee(scope=document){
+  const rows = scope.querySelectorAll('.obs-item');
+
+  rows.forEach(row=>{
+    const holder = row.querySelector('.obs-title');
+    if(!holder) return;
+
+    const originalText = String(row.dataset.title || holder.textContent || '').trim();
+    holder.dataset.marqueeText = originalText;
+    stopMarqueeHolder(holder, 'obs-title-text');
+
+    if(!row.classList.contains('is-current')) return;
+
+    runHorizontalMarquee(holder, {
+      textClass: 'obs-title-text',
+      trackClass: 'obs-title-track',
+      speed: 54,
+      varName: '--obs-mq-x',
+      onlyWhenOverflow: false,
+    });
+  });
+}
+
+function scheduleMarqueeRefresh(scope=document){
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      applyNowPlayingMarquee(scope);
+      applyObsTitleMarquee(scope);
+    });
+  });
+
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(()=>{
+      requestAnimationFrame(()=>{
+        applyNowPlayingMarquee(scope);
+        applyObsTitleMarquee(scope);
+      });
+    }).catch(()=>{});
+  }
+}
+
+function makeQueueFingerprint(list){
+  return JSON.stringify((list || []).map((q, i)=>({
+    i,
+    id: String(q.id || ''),
+    title: String(q.title || ''),
+    artist: String(q.artist || ''),
+    by: String(q.by || ''),
+    isCurrent: !!q.isCurrent,
+    status: String(q.status || '')
+  })));
+}
+
 function renderQueue(){
   const box=$('queueList');
   if(!box) return;
 
   if(!queue.length){
     box.innerHTML='<div class="empty-state">Queue 是空的 ✨</div>';
+    lastQueueFingerprint = makeQueueFingerprint(queue);
+    lastRenderedCurrentQueueId = String(currentQueueId || '');
     return;
   }
 
@@ -258,13 +478,18 @@ function renderQueue(){
     const current = state==='current';
     const ytQuery = encodeURIComponent(`${q.title||''} ${q.artist||''}`.trim());
 
+    const rawTitle = String(q.title || '');
+    const titleLenClass =
+      rawTitle.length >= 18 ? 'qlen-3' :
+      rawTitle.length >= 11 ? 'qlen-2' : '';
+
     return `
-      <div class="queue-row ${current ? 'now-playing-row' : ''}">
+      <div class="queue-row ${current ? 'now-playing-row' : ''}" data-title="${esc(rawTitle)}">
         <div class="queue-rank">${i+1}</div>
         <div class="queue-main">
           <div class="queue-title-line">
             ${current?'<span class="badge badge-now">▶</span>':''}
-            <span class="queue-song-name">${esc(q.title||'')}</span>
+            <span class="queue-song-name ${titleLenClass}"><span class="queue-song-text">${esc(rawTitle)}</span></span>
             <span class="pill">${esc(q.artist||'')}</span>
           </div>
           <div class="queue-meta-line">${who}</div>
@@ -283,9 +508,30 @@ function renderQueue(){
 
   box.querySelectorAll('[data-current]').forEach(btn=>{
     btn.onclick=async()=>{
-      await api('setcurrent',{queueId:btn.dataset.current});
-      currentQueueId=btn.dataset.current;
-      await syncFast(true);
+      const nextId = btn.dataset.current;
+      const prevId = currentQueueId;
+
+      try{
+        btn.disabled = true;
+
+        await api('setcurrent', { queueId: nextId });
+
+        currentQueueId = nextId;
+        renderQueue();
+
+        setTimeout(async () => {
+          try{
+            await syncFast(true);
+          }catch(_){}
+        }, 300);
+
+      }catch(e){
+        currentQueueId = prevId;
+        renderQueue();
+        alert('設成現在播放失敗：' + (e?.message || String(e)));
+      }finally{
+        btn.disabled = false;
+      }
     };
   });
 
@@ -309,22 +555,22 @@ function renderQueue(){
     };
   });
 
-box.querySelectorAll('[data-played]').forEach(btn=>{
-  btn.onclick=async()=>{
-    const id = btn.dataset.played;
-    const item = queue.find(x=>String(x.id)===String(id));
+  box.querySelectorAll('[data-played]').forEach(btn=>{
+    btn.onclick=async()=>{
+      const id = btn.dataset.played;
+      const item = queue.find(x=>String(x.id)===String(id));
 
-    await api('removequeue',{queueId:id});
+      await api('removequeue',{queueId:id});
 
-    await api('played',{
-      queueId:id,
-      title:item?.title||'',
-      artist:item?.artist||''
-    });
+      await api('played',{
+        queueId:id,
+        title:item?.title||'',
+        artist:item?.artist||''
+      });
 
-    await syncAll(true);
-  };
-});
+      await syncAll(true);
+    };
+  });
 
   box.querySelectorAll('[data-remove]').forEach(btn=>{
     btn.onclick=async()=>{
@@ -332,6 +578,11 @@ box.querySelectorAll('[data-played]').forEach(btn=>{
       await syncFast(true);
     };
   });
+
+  fitQueueSongNames(box);
+  scheduleMarqueeRefresh(box);
+  lastQueueFingerprint = makeQueueFingerprint(queue);
+  lastRenderedCurrentQueueId = String(currentQueueId || '');
 }
 
 function renderSongs(){
@@ -518,11 +769,21 @@ function renderWishList(){
 
 async function syncFast(force){
   try{
-    const q1=await api('queue');
-    queue=q1.data||[];
-    currentQueueId=String(q1.currentQueueId || currentQueueId || '');
+    const q1 = await api('queue');
+    const newQueue = q1.data || [];
+    const newCurrentQueueId = String(q1.currentQueueId || currentQueueId || '');
+    const newFingerprint = makeQueueFingerprint(newQueue);
+    const queueChanged = newFingerprint !== lastQueueFingerprint;
+    const currentChanged = newCurrentQueueId !== lastRenderedCurrentQueueId;
 
-    if(force||currentPage==='queue') renderQueue();
+    queue = newQueue;
+    currentQueueId = newCurrentQueueId;
+
+    if(force || (currentPage==='queue' && (queueChanged || currentChanged))){
+      renderQueue();
+      lastQueueFingerprint = newFingerprint;
+      lastRenderedCurrentQueueId = newCurrentQueueId;
+    }
 
     setStatus('已同步：'+new Date().toLocaleTimeString());
   }catch(e){
@@ -616,11 +877,9 @@ function openObsUrl(page){
 }
 
 async function bulkPlayedQueue(){
-
   if(!queue.length) return;
 
   for(const q of queue){
-
     await api('removequeue',{queueId:q.id});
 
     await api('played',{
@@ -628,7 +887,6 @@ async function bulkPlayedQueue(){
       title:q.title||'',
       artist:q.artist||''
     });
-
   }
 
   await syncFast(true);
@@ -639,3 +897,7 @@ async function bulkRemoveQueue(){
   await api('bulkremove');
   await syncFast(true);
 }
+
+window.addEventListener('resize', debounce(()=>{
+  scheduleMarqueeRefresh(document);
+}, 120));

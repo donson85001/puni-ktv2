@@ -4,6 +4,7 @@ const headerEl = document.getElementById('header');
 const bodyEl = document.body;
 const params = new URLSearchParams(location.search);
 const showTitle = params.get('title') !== '0';
+const OBS_MARQUEE_GAP = 48;
 const page = Math.max(1, Math.min(2, Number(params.get('page') || '1')));
 const PAGE_SIZE = 15;
 const VALID_LIMITS = [5, 10, 15, 20, 25, 30];
@@ -105,6 +106,8 @@ async function sync(force) {
     if (force || sig !== lastSig) {
       lastSig = sig;
       render(shown, limitedQueue, start, currentQueueId, limit);
+      fitObsTitles(listEl);
+      scheduleObsMarqueeRefresh(listEl);
     }
 
     if (syncTextEl) {
@@ -137,15 +140,16 @@ function render(pageQueue, fullQueue, start, currentQueueId, limit) {
     const fullIndex = start + i;
     const state = queueState(item, fullIndex, fullQueue, currentQueueId);
     const who = esc((item.by || item.artist || '').trim());
-    const song = esc(item.title || '');
+    const rawSong = String(item.title || '');
+    const song = esc(rawSong);
     const prefix = state === 'current' ? '▶' : '';
     const displayIndex = buildDisplayIndex(fullIndex + 1);
 
     return `
-      <div class="obs-item fixed-obs-item ${state === 'current' ? 'is-current' : ''}">
+      <div class="obs-item fixed-obs-item ${state === 'current' ? 'is-current' : ''}" data-title="${esc(rawSong)}">
         <div class="obs-num fixed-obs-num">${prefix}${displayIndex}</div>
         <div class="obs-main fixed-obs-main">
-          <div class="obs-title fixed-obs-title">${song}</div>
+          <div class="obs-title fixed-obs-title"><span class="obs-title-text">${song}</span></div>
         </div>
         <div class="obs-side fixed-obs-side">
           <div class="obs-meta fixed-obs-meta">${who}</div>
@@ -154,3 +158,159 @@ function render(pageQueue, fullQueue, start, currentQueueId, limit) {
     `;
   }).join('');
 }
+
+
+function fitObsTitles(scope=document){
+  const rows = scope.querySelectorAll('.obs-item');
+
+  rows.forEach(row => {
+    const holder = row.querySelector('.obs-title');
+    const text = row.querySelector('.obs-title-text');
+    if (!holder || !text) return;
+
+    holder.style.removeProperty('--obs-mq-x');
+    text.style.removeProperty('font-size');
+    text.style.whiteSpace = 'nowrap';
+
+    if (row.classList.contains('is-current')) return;
+
+    let size = 14;
+    const min = 9;
+    text.style.fontSize = size + 'px';
+
+    while (text.scrollWidth > holder.clientWidth && size > min) {
+      size -= 1;
+      text.style.fontSize = size + 'px';
+    }
+  });
+}
+
+function stopObsMarquee(holder) {
+  if (!holder) return;
+
+  if (holder._stopMarquee) {
+    holder._stopMarquee();
+    holder._stopMarquee = null;
+  }
+
+  if (holder._mqRaf) {
+    cancelAnimationFrame(holder._mqRaf);
+    holder._mqRaf = null;
+  }
+
+  holder.classList.remove('obs-marquee-holder');
+  holder.removeAttribute('data-marquee');
+  holder.style.removeProperty('--obs-mq-x');
+
+  const originalText = String(holder.dataset.marqueeText || holder.textContent || '').trim();
+  holder.innerHTML = `<span class="obs-title-text">${esc(originalText)}</span>`;
+}
+
+function runObsMarquee(holder) {
+  if (!holder) return false;
+
+  const plainText = holder.querySelector('.obs-title-text');
+  if (!plainText) return false;
+
+  const holderWidth = Math.ceil(holder.getBoundingClientRect().width || holder.clientWidth || 0);
+  const textWidth = Math.ceil(plainText.scrollWidth || plainText.getBoundingClientRect().width || 0);
+  if (!holderWidth || !textWidth) return false;
+
+  const originalText = String(holder.dataset.marqueeText || plainText.textContent || '').trim();
+  const copies = 3;
+
+  holder.classList.add('obs-marquee-holder');
+  holder.setAttribute('data-marquee', 'on');
+  const segmentHtml = `
+      <span class="obs-title-text">${esc(originalText)}</span>
+      <span class="obs-title-gap" aria-hidden="true"></span>
+  `;
+  holder.innerHTML = `
+    <span class="obs-title-track">
+      ${segmentHtml.repeat(copies - 1)}
+      <span class="obs-title-text" aria-hidden="true">${esc(originalText)}</span>
+    </span>
+  `;
+
+  const gap = 34;
+  const speed = 54;
+  const gapNodes = holder.querySelectorAll('.obs-title-gap');
+  gapNodes.forEach(node => {
+    node.style.width = `${gap}px`;
+    node.style.flex = `0 0 ${gap}px`;
+  });
+
+  let offset = 0;
+  let lastTs = null;
+  let running = true;
+  const segmentWidth = textWidth + gap;
+
+  function tick(ts) {
+    if (!running) return;
+
+    if (lastTs == null) lastTs = ts;
+    const dt = Math.max(0, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    offset -= speed * dt;
+    while (offset <= -segmentWidth) {
+      offset += segmentWidth;
+    }
+
+    holder.style.setProperty('--obs-mq-x', `${offset}px`);
+    holder._mqRaf = requestAnimationFrame(tick);
+  }
+
+  holder.style.setProperty('--obs-mq-x', '0px');
+  holder._mqRaf = requestAnimationFrame(tick);
+
+  holder._stopMarquee = () => {
+    running = false;
+    if (holder._mqRaf) {
+      cancelAnimationFrame(holder._mqRaf);
+      holder._mqRaf = null;
+    }
+  };
+
+  return true;
+}
+
+function applyObsNowPlayingMarquee(scope=document) {
+  const rows = scope.querySelectorAll('.obs-item');
+
+  rows.forEach(row => {
+    const titleEl = row.querySelector('.obs-title');
+    if (!titleEl) return;
+
+    const originalText = String(row.dataset.title || titleEl.textContent || '').trim();
+    titleEl.dataset.marqueeText = originalText;
+    stopObsMarquee(titleEl);
+
+    if (!row.classList.contains('is-current')) return;
+
+    runObsMarquee(titleEl);
+  });
+}
+
+function scheduleObsMarqueeRefresh(scope=document) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fitObsTitles(scope);
+      applyObsNowPlayingMarquee(scope);
+    });
+  });
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      requestAnimationFrame(() => {
+        fitObsTitles(scope);
+        applyObsNowPlayingMarquee(scope);
+      });
+    }).catch(() => {});
+  }
+}
+
+window.addEventListener('resize', debounce(() => {
+  fitObsTitles(listEl);
+  applyObsNowPlayingMarquee(listEl);
+}, 120));

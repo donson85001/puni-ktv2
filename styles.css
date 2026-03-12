@@ -11,14 +11,20 @@
 
 *{box-sizing:border-box}
 
-html,body{
+html,body,
+button,input,select,textarea{
   margin:0;
   padding:0;
   color:var(--text);
-  font-family:"Noto Sans TC",system-ui,sans-serif;
+  font-family:
+    "Noto Sans TC",
+    "Microsoft JhengHei",
+    "PingFang TC",
+    sans-serif;
 }
 
 body{
+font-weight:700;
   min-height:100vh;
   background:
     linear-gradient(rgba(7,11,20,.55),rgba(7,11,20,.55)),
@@ -132,11 +138,13 @@ body{
 
 .nav{
   width:100%;
-  padding:14px 16px;
+  padding:16px 18px;
   border-radius:18px;
   text-align:left;
   cursor:pointer;
   font-weight:900;
+  font-size:22px;
+  line-height:1.15;
 }
 
 .nav.active,.btn-primary,.chip-active{
@@ -404,16 +412,29 @@ input::placeholder{
 .queue-title-line{
   display:flex;
   align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
+  gap:8px;
+  flex-wrap:nowrap;
+  min-width:0;
 }
 
 .queue-song-name{
-  font-size:23px;
+  flex:1 1 auto;
+  min-width:0;
+  font-size:24px;
   font-weight:900;
-  line-height:1.25;
-  word-break:break-word;
+  line-height:1.15;
   color:#fff;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  word-break:normal;
+}
+.queue-song-name.qlen-2{
+  font-size:21px;
+}
+
+.queue-song-name.qlen-3{
+  font-size:18px;
 }
 
 .queue-actions{
@@ -787,10 +808,1023 @@ body.obs-body::before{display:none}
   .queue-actions{justify-content:flex-start}
   .search{grid-template-columns:1fr}
   .hero::after{width:70px;height:70px}
-  .obs-item{grid-template-columns:34px minmax(0,1fr)}
-  .obs-meta{display:none}
+
+  .obs-item{
+    grid-template-columns:34px minmax(0,1fr) 72px;
+  }
+
+  .obs-meta{
+    display:block;
+    font-size:11px;
+    text-align:right;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
   .obs-head{font-size:24px}
   .wish-card{min-height:auto}
   .wish-song{font-size:20px}
   .wish-inline-form{grid-template-columns:1fr}
+}
+/* ===== 全站改成主播播放清單那種粗字體 ===== */
+html,body,
+button,input,select,textarea{
+  font-family:'M PLUS Rounded 1c','Noto Sans TC',system-ui,sans-serif !important;
+  font-weight:900 !important;
+  letter-spacing:.2px;
+}
+
+.title,
+.hero h2,
+.card-h,
+.panel-title,
+.panel-subtitle,
+.row-title,
+.song-title,
+.stat-value,
+.obs-head,
+.obs-title,
+.gate-card .title,
+.nav,
+.btn,
+.chip,
+.pill,
+.badge,
+.queue-song-name,
+.queue-meta-line,
+.wish-song,
+.wish-user{
+  font-family:'M PLUS Rounded 1c','Noto Sans TC',system-ui,sans-serif !important;
+  font-weight:900 !important;
+}
+/* ===== Queue 專用安全整理版：只動播放清單 ===== */
+
+/* 主播 / 觀眾 queue 整列 */
+.queue-row{
+  display:grid !important;
+  grid-template-columns: 46px minmax(0,1fr) 292px !important;
+  gap: 10px !important;
+  align-items:center !important;
+  padding: 14px 16px !important;
+}
+
+/* 左側主資訊 */
+.queue-main{
+  min-width:0 !important;
+}
+
+/* 標題列：永遠單行 */
+.queue-title-line{
+  display:flex !important;
+  align-items:center !important;
+  gap:6px !important;
+  flex-wrap:nowrap !important;
+  min-width:0 !important;
+}
+
+/* 歌名優先，單行、省略 */
+.queue-song-name{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  line-height:1.1 !important;
+  font-size:26px !important;
+  letter-spacing:0 !important;
+}
+
+/* 長歌名分級縮字 */
+.queue-song-name.qlen-2{
+  font-size:23px !important;
+}
+
+.queue-song-name.qlen-3{
+  font-size:20px !important;
+}
+
+/* 歌手 badge 再小一點，並限制寬度 */
+.queue-title-line .pill{
+  flex:0 0 auto !important;
+  max-width:58px !important;
+  padding:2px 6px !important;
+  font-size:10px !important;
+  line-height:1 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+/* 播放中 badge 縮緊，不搶空間 */
+.queue-title-line .badge,
+.queue-title-line .badge-now{
+  flex:0 0 auto !important;
+  padding:3px 7px !important;
+  font-size:11px !important;
+  line-height:1 !important;
+}
+
+/* 點歌者維持第二行小字 */
+.queue-meta-line{
+  margin-top:3px !important;
+  font-size:13px !important;
+  line-height:1.1 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+/* 右邊按鈕區固定，但縮小 */
+.queue-actions{
+  width:292px !important;
+  min-width:292px !important;
+  display:flex !important;
+  gap:6px !important;
+  flex-wrap:nowrap !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+}
+
+/* queue 內的小按鈕縮小一點 */
+.queue-actions .btn,
+.queue-actions .btn-mini{
+  flex:0 0 auto !important;
+  padding:7px 10px !important;
+  font-size:12px !important;
+  line-height:1 !important;
+}
+
+/* 播放箭頭按鈕固定寬 */
+.queue-actions .btn-icon{
+  min-width:36px !important;
+  width:36px !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+}
+
+/* YT / ▲ / ▼ 三顆再小一點 */
+.queue-actions .btn-yt,
+.queue-actions [data-up],
+.queue-actions [data-down]{
+  min-width:38px !important;
+}
+
+/* 單首+1 / 移除不准太胖 */
+.queue-actions [data-played]{
+  padding-left:10px !important;
+  padding-right:10px !important;
+}
+
+.queue-actions [data-remove]{
+  padding-left:10px !important;
+  padding-right:10px !important;
+}
+
+/* 手機才改成直式，桌機不要亂掉 */
+@media (max-width:900px){
+  .queue-row{
+    grid-template-columns:1fr !important;
+  }
+
+  .queue-actions{
+    width:auto !important;
+    min-width:0 !important;
+    flex-wrap:wrap !important;
+    justify-content:flex-start !important;
+  }
+}
+
+@keyframes nowPlayingMarqueeEnterLeave {
+  from {
+    transform: translate3d(var(--mq-start, 0px), -50%, 0);
+  }
+  to {
+    transform: translate3d(var(--mq-end, 0px), -50%, 0);
+  }
+}
+
+.queue-row.now-playing-row .queue-title-line{
+  overflow:hidden !important;
+}
+
+.queue-row.now-playing-row .queue-song-name{
+  display:block !important;
+  min-width:0 !important;
+  overflow:hidden !important;
+  position:relative !important;
+  text-overflow:clip !important;
+}
+
+.queue-row.now-playing-row .queue-song-name.marquee-holder{
+  overflow:hidden !important;
+}
+
+.queue-row.now-playing-row .queue-song-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-block !important;
+  white-space:nowrap !important;
+  will-change:transform !important;
+  animation: nowPlayingMarqueeEnterLeave var(--mq-duration, 10s) linear infinite !important;
+}
+
+.queue-row.now-playing-row .queue-song-track .queue-song-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+}
+
+
+/* ===== 2026 marquee fix ===== */
+.queue-row.now-playing-row .queue-song-name{
+  display:flex !important;
+  align-items:center !important;
+  min-height:1.2em !important;
+}
+
+.queue-row.now-playing-row .queue-song-name.marquee-holder{
+  position:relative !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+}
+
+.queue-row.now-playing-row .queue-song-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  transform:translate3d(var(--mq-start, 0px), -50%, 0) !important;
+  display:inline-block !important;
+  white-space:nowrap !important;
+  will-change:transform !important;
+  pointer-events:none !important;
+  animation: nowPlayingMarqueeEnterLeave var(--mq-duration, 10s) linear infinite !important;
+}
+
+.queue-row.now-playing-row .queue-song-track .queue-song-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+}
+
+.obs-item.is-current .obs-main,
+.obs-item.is-current .obs-title{
+  min-width:0 !important;
+}
+
+.obs-item.is-current .obs-title.obs-marquee-holder{
+  position:relative !important;
+  display:block !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+}
+
+.obs-item.is-current .obs-title-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  transform:translate3d(var(--obs-mq-start, 0px), -50%, 0) !important;
+  display:inline-block !important;
+  white-space:nowrap !important;
+  will-change:transform !important;
+  pointer-events:none !important;
+  animation: obsTitleMarqueeEnterLeave var(--obs-mq-duration, 10s) linear infinite !important;
+}
+
+.obs-item.is-current .obs-title-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+}
+
+@keyframes obsTitleMarqueeEnterLeave {
+  from {
+    transform: translate3d(var(--obs-mq-start, 0px), -50%, 0);
+  }
+  to {
+    transform: translate3d(var(--obs-mq-end, 0px), -50%, 0);
+  }
+}
+
+
+/* ===== marquee rewrite 2026-03 ===== */
+:root{
+  --queue-marquee-gap: 48px;
+  --obs-marquee-gap: 48px;
+}
+
+.queue-title-line{
+  min-width: 0;
+}
+
+.queue-title-line .pill{
+  flex: 0 0 auto;
+}
+
+.queue-row.now-playing-row .queue-song-name{
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  position: relative !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+}
+
+.queue-row.now-playing-row .queue-song-name.is-marquee-active{
+  min-height: 1.2em !important;
+}
+
+.queue-row.now-playing-row .queue-song-track{
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  will-change: transform !important;
+  pointer-events: none !important;
+  transform: translate3d(var(--mq-from, 0px), -50%, 0) !important;
+  animation: queueNowPlayingMarquee var(--mq-duration, 10s) linear infinite !important;
+}
+
+.queue-row.now-playing-row .queue-song-track .queue-song-text{
+  display: inline-block !important;
+  white-space: nowrap !important;
+}
+
+.obs-item.is-current .obs-main{
+  min-width: 0 !important;
+}
+
+.obs-item.is-current .obs-title{
+  position: relative !important;
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  line-height: 1.15 !important;
+}
+
+.obs-item.is-current .obs-title.is-marquee-active{
+  min-height: 1.15em !important;
+}
+
+.obs-item.is-current .obs-title-track{
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  will-change: transform !important;
+  pointer-events: none !important;
+  transform: translate3d(var(--obs-mq-from, 0px), -50%, 0) !important;
+  animation: obsNowPlayingMarquee var(--obs-mq-duration, 10s) linear infinite !important;
+}
+
+.obs-item.is-current .obs-title-track .obs-title-text{
+  display: inline-block !important;
+  white-space: nowrap !important;
+}
+
+@keyframes queueNowPlayingMarquee {
+  from { transform: translate3d(var(--mq-from, 0px), -50%, 0); }
+  to { transform: translate3d(var(--mq-to, 0px), -50%, 0); }
+}
+
+@keyframes obsNowPlayingMarquee {
+  from { transform: translate3d(var(--obs-mq-from, 0px), -50%, 0); }
+  to { transform: translate3d(var(--obs-mq-to, 0px), -50%, 0); }
+}
+
+
+
+
+/* ===== FINAL JS MARQUEE OVERRIDES 2026-03-12 ===== */
+/* Queue marquee: CSS 只保留定位，動畫全部交給 JS */
+.queue-title-line{
+  min-width:0 !important;
+}
+
+.queue-title-line .pill{
+  flex:0 0 auto !important;
+}
+
+.queue-main{
+  min-width:0 !important;
+}
+
+.queue-row.now-playing-row .queue-title-line{
+  overflow:hidden !important;
+}
+
+.queue-row.now-playing-row .queue-song-name{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  width:100% !important;
+  display:block !important;
+  position:relative !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+  white-space:nowrap !important;
+  line-height:1.2 !important;
+}
+
+.queue-row.now-playing-row .queue-song-name[data-marquee="on"]{
+  min-height:1.25em !important;
+}
+
+.queue-row.now-playing-row .queue-song-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  will-change:transform !important;
+  pointer-events:none !important;
+  transform:translate3d(0,-50%,0) !important;
+  animation:none !important;
+}
+
+.queue-row.now-playing-row .queue-song-track .queue-song-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  flex:0 0 auto !important;
+}
+
+.queue-row.now-playing-row .queue-song-gap{
+  display:inline-block !important;
+  width:56px !important;
+  min-width:56px !important;
+  flex:0 0 56px !important;
+  height:1px !important;
+}
+
+/* OBS marquee: CSS 只保留定位，動畫全部交給 JS / OBS script */
+.obs-item.is-current .obs-main,
+.obs-item.is-current .obs-title{
+  min-width:0 !important;
+}
+
+.obs-item.is-current .obs-title{
+  position:relative !important;
+  display:block !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+  white-space:nowrap !important;
+  line-height:1.15 !important;
+}
+
+.obs-item.is-current .obs-title[data-marquee="on"]{
+  min-height:1.15em !important;
+}
+
+.obs-item.is-current .obs-title-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  will-change:transform !important;
+  pointer-events:none !important;
+  transform:translate3d(0,-50%,0) !important;
+  animation:none !important;
+}
+
+.obs-item.is-current .obs-title-track .obs-title-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  flex:0 0 auto !important;
+}
+
+.obs-item.is-current .obs-title-gap{
+  display:inline-block !important;
+  width:44px !important;
+  min-width:44px !important;
+  flex:0 0 44px !important;
+  height:1px !important;
+}
+
+
+
+/* ===== FINAL NORMAL-FILENAME MARQUEE OVERRIDES ===== */
+.queue-song-name{
+  text-overflow:clip !important;
+}
+
+.queue-song-name .queue-song-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  max-width:none !important;
+}
+
+.queue-row .queue-title-line{
+  min-width:0 !important;
+}
+
+.queue-row .queue-main{
+  min-width:0 !important;
+}
+
+.queue-row .queue-song-name{
+  position:relative !important;
+  display:block !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+}
+
+.queue-row.now-playing-row .queue-song-name{
+  min-height:1.2em !important;
+}
+
+.queue-row.now-playing-row .queue-song-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  pointer-events:none !important;
+  will-change:transform !important;
+  transform:translate3d(var(--mq-x, 0px), -50%, 0) !important;
+  animation:none !important;
+}
+
+.queue-row.now-playing-row .queue-song-gap{
+  display:inline-block !important;
+  flex:0 0 52px !important;
+  width:52px !important;
+}
+
+.queue-row.now-playing-row .queue-song-track .queue-song-text{
+  font-size:inherit !important;
+}
+
+.obs-title{
+  text-overflow:clip !important;
+}
+
+.obs-title .obs-title-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  max-width:none !important;
+}
+
+.obs-item .obs-main,
+.obs-item .obs-title{
+  min-width:0 !important;
+}
+
+.obs-item .obs-title{
+  position:relative !important;
+  display:block !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+}
+
+.obs-item.is-current .obs-title-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  pointer-events:none !important;
+  will-change:transform !important;
+  transform:translate3d(var(--obs-mq-x, 0px), -50%, 0) !important;
+  animation:none !important;
+}
+
+.obs-item.is-current .obs-title-gap{
+  display:inline-block !important;
+  flex:0 0 44px !important;
+  width:44px !important;
+}
+
+
+/* audience queue title fix */
+.audience-page .home-queue .queue-row:not(.now-playing-row) .queue-song-name{
+  white-space:normal !important;
+}
+.audience-page .home-queue .queue-row:not(.now-playing-row) .queue-song-text{
+  display:-webkit-box !important;
+  -webkit-box-orient:vertical !important;
+  -webkit-line-clamp:2 !important;
+  overflow:hidden !important;
+  white-space:normal !important;
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+
+/* ===== 2026-03-12 targeted cleanup ===== */
+body.audience-page .queue-row{
+  grid-template-columns:52px minmax(0,1fr) !important;
+}
+
+body.audience-page .audience-queue-card{
+  padding:20px !important;
+}
+
+body.audience-page .audience-home-queue{
+  max-height:none !important;
+}
+
+body.audience-page #page-queue .queue-title-line{
+  gap:10px !important;
+}
+
+body.audience-page #page-queue .queue-song-name{
+  font-size:28px !important;
+  width:100% !important;
+}
+
+body.audience-page #page-queue .queue-meta-line{
+  margin-top:6px !important;
+  font-size:15px !important;
+}
+
+body.audience-page #page-queue .queue-row.now-playing-row{
+  padding:16px 18px !important;
+}
+
+body.audience-page #page-queue .queue-row.now-playing-row .queue-main,
+body.audience-page #page-queue .queue-row.now-playing-row .queue-title-line,
+body.audience-page #page-queue .queue-row.now-playing-row .queue-song-name{
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+body.audience-page #page-queue .queue-row.now-playing-row .queue-song-name{
+  overflow:hidden !important;
+}
+
+body.audience-page #page-queue .queue-row.now-playing-row .queue-song-track{
+  max-width:none !important;
+}
+
+/* category wrapper back to pill style with translucent gray shell */
+.category-wrap{
+  padding:16px 18px !important;
+  border-radius:26px !important;
+  border:1px solid rgba(255,255,255,.14) !important;
+  background:rgba(90,98,115,.5) !important;
+  box-shadow:0 14px 36px rgba(0,0,0,.18) !important;
+  backdrop-filter:blur(10px) !important;
+}
+
+.category-wrap .panel-title{
+  border-bottom:none !important;
+  padding:0 0 14px !important;
+  background:none !important;
+}
+
+.chip-grid{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:10px !important;
+}
+
+.chip{
+  border-radius:999px !important;
+  padding:10px 18px !important;
+  background:linear-gradient(180deg,rgba(49,60,84,.9),rgba(27,36,57,.95)) !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 8px 18px rgba(0,0,0,.14) !important;
+}
+
+.chip-active,
+.nav.active,
+.btn-rainbow,
+#copyObsUrlBtn1,#copyObsUrlBtn2,
+#bulkRemoveBtn{
+  background:linear-gradient(90deg,#ef72c5 0%, #ab82ff 50%, #73c6ff 100%) !important;
+  border-color:rgba(255,255,255,.34) !important;
+  color:#fff !important;
+  box-shadow:0 10px 24px rgba(171,130,255,.28) !important;
+}
+
+/* top nav pills */
+.nav{
+  border-radius:999px !important;
+  font-size:21px !important;
+  padding:15px 18px !important;
+}
+
+/* streamer obs selected vs unselected */
+.streamer-page #obsLimitControls .chip{
+  background:linear-gradient(180deg,rgba(37,47,69,.92),rgba(20,29,47,.95)) !important;
+}
+.streamer-page #obsLimitControls .chip.chip-active{
+  background:linear-gradient(90deg,#ef72c5 0%, #ab82ff 50%, #73c6ff 100%) !important;
+}
+
+/* open obs buttons stay normal */
+#openObsUrlBtn1,#openObsUrlBtn2{
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04)) !important;
+  border-color:var(--line) !important;
+  box-shadow:none !important;
+}
+
+/* queue add buttons: premium deep purple */
+#bulkPlayedBtn,
+.streamer-page [data-played],
+.streamer-page [data-songid]{
+  background:linear-gradient(135deg,rgba(84,34,138,.96) 0%, rgba(120,58,187,.96) 52%, rgba(53,25,101,.98) 100%) !important;
+  border-color:rgba(205,177,255,.3) !important;
+  color:#fff !important;
+  box-shadow:0 12px 24px rgba(64,26,116,.28) !important, inset 0 1px 0 rgba(255,255,255,.12) !important;
+}
+
+.streamer-page [data-played]:hover,
+.streamer-page [data-songid]:hover,
+#bulkPlayedBtn:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.05);
+}
+
+/* keep danger delete distinct */
+.btn-danger,
+.streamer-page [data-remove]{
+  background:linear-gradient(180deg,rgba(255,157,177,.18),rgba(255,157,177,.08)) !important;
+  border-color:rgba(255,157,177,.3) !important;
+}
+
+/* audience full-width queue card spacing */
+body.audience-page #page-queue .card-h{
+  margin-bottom:16px !important;
+}
+
+/* category panel spacing for both pages */
+body.audience-page #page-songs #catPanel,
+body.streamer-page #page-songs #catPanel{
+  margin-bottom:6px !important;
+}
+
+@media (max-width:900px){
+  body.audience-page .queue-row{
+    grid-template-columns:46px minmax(0,1fr) !important;
+  }
+}
+
+
+/* ===== STREAMER MARQUEE FINAL CLEAN OVERRIDES ===== */
+body.streamer-page .queue-row.now-playing-row .queue-song-name,
+body.streamer-page .queue-row.now-playing-row .queue-title-line,
+body.streamer-page .queue-row.now-playing-row .queue-main{
+  min-width:0 !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-name{
+  position:relative !important;
+  display:block !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  text-overflow:clip !important;
+  line-height:1.12 !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  pointer-events:none !important;
+  will-change:transform !important;
+  transform:translate3d(var(--mq-x, 0px), -50%, 0) !important;
+  animation:none !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-track .queue-song-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  flex:0 0 auto !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-gap{
+  display:inline-block !important;
+  width:12px !important;
+  min-width:12px !important;
+  flex:0 0 12px !important;
+  height:1px !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title,
+body.streamer-page .obs-item.is-current .obs-main{
+  min-width:0 !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title{
+  position:relative !important;
+  display:block !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  text-overflow:clip !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  pointer-events:none !important;
+  will-change:transform !important;
+  transform:translate3d(var(--obs-mq-x, 0px), -50%, 0) !important;
+  animation:none !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title-track .obs-title-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  flex:0 0 auto !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title-gap{
+  display:inline-block !important;
+  width:10px !important;
+  min-width:10px !important;
+  flex:0 0 10px !important;
+  height:1px !important;
+}
+
+/* ===== STREAMER FINAL OVERRIDES 2026-03-12 ===== */
+/* 主播頁：直接套用觀眾頁目前播放跑馬燈邏輯 */
+body.streamer-page .queue-row.now-playing-row .queue-main,
+body.streamer-page .queue-row.now-playing-row .queue-title-line,
+body.streamer-page .queue-row.now-playing-row .queue-song-name{
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-title-line{
+  overflow:hidden !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-name{
+  flex:1 1 auto !important;
+  width:100% !important;
+  display:block !important;
+  position:relative !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  text-overflow:clip !important;
+  line-height:1.2 !important;
+  min-height:1.2em !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-name[data-marquee="on"]{
+  min-height:1.25em !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  pointer-events:none !important;
+  will-change:transform !important;
+  transform:translate3d(var(--mq-x, 0px), -50%, 0) !important;
+  animation:none !important;
+  max-width:none !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-track .queue-song-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  max-width:none !important;
+  flex:0 0 auto !important;
+  font-size:inherit !important;
+}
+
+body.streamer-page .queue-row.now-playing-row .queue-song-gap{
+  display:none !important;
+}
+
+/* OBS 也維持 JS 控制，不吃舊動畫 */
+body.streamer-page .obs-item.is-current .obs-main,
+body.streamer-page .obs-item.is-current .obs-title{
+  min-width:0 !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title{
+  position:relative !important;
+  display:block !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  text-overflow:clip !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title-track{
+  position:absolute !important;
+  left:0 !important;
+  top:50% !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+  pointer-events:none !important;
+  will-change:transform !important;
+  transform:translate3d(var(--obs-mq-x, 0px), -50%, 0) !important;
+  animation:none !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title-track .obs-title-text{
+  display:inline-block !important;
+  white-space:nowrap !important;
+  min-width:max-content !important;
+  max-width:none !important;
+  flex:0 0 auto !important;
+}
+
+body.streamer-page .obs-item.is-current .obs-title-gap{
+  display:none !important;
+}
+
+/* ===== 主播 Queue 按鈕質感實心版：移除透明度感 ===== */
+body.streamer-page .queue-actions .btn,
+body.streamer-page .queue-actions .btn-mini{
+  border-width:1px !important;
+  border-style:solid !important;
+  color:#fff !important;
+  box-shadow:0 12px 24px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.14) !important;
+}
+
+/* 播放按鈕：彩虹 */
+body.streamer-page .queue-actions [data-current]{
+  background:linear-gradient(135deg,#ff5fb2 0%, #a86cff 48%, #5cc8ff 100%) !important;
+  border-color:#ffd0ea !important;
+  box-shadow:0 12px 26px rgba(171,130,255,.34), inset 0 1px 0 rgba(255,255,255,.2) !important;
+}
+
+body.streamer-page .queue-actions [data-current]:hover:not(:disabled){
+  filter:brightness(1.06) !important;
+}
+
+body.streamer-page .queue-actions [data-current]:disabled{
+  opacity:1 !important;
+  filter:brightness(.92) !important;
+  cursor:default !important;
+}
+
+/* YT：質感紅 */
+body.streamer-page .queue-actions .btn-yt,
+body.streamer-page .queue-actions [data-yt]{
+  background:linear-gradient(135deg,#b31217 0%, #e52d27 55%, #7f1016 100%) !important;
+  border-color:#ffb3b3 !important;
+}
+
+/* 上交換：質感橙 */
+body.streamer-page .queue-actions [data-up]{
+  background:linear-gradient(135deg,#d96a00 0%, #ff9a1f 56%, #9e4700 100%) !important;
+  border-color:#ffd19a !important;
+}
+
+/* 下交換：質感黃 */
+body.streamer-page .queue-actions [data-down]{
+  background:linear-gradient(135deg,#b88a00 0%, #ffd54a 56%, #8a6400 100%) !important;
+  border-color:#fff0a8 !important;
+  color:#2d2200 !important;
+  text-shadow:none !important;
+}
+
+/* 單首 +1：維持原本高質感紫 */
+body.streamer-page .queue-actions [data-played],
+#bulkPlayedBtn,
+body.streamer-page [data-songid]{
+  background:linear-gradient(135deg,#54228a 0%, #783abb 52%, #351965 100%) !important;
+  border-color:#cdb1ff !important;
+}
+
+/* 移除：改成質感藍 */
+body.streamer-page .queue-actions [data-remove],
+body.streamer-page #bulkRemoveBtn,
+body.streamer-page .btn-danger{
+  background:linear-gradient(135deg,#0f5bd8 0%, #3ba0ff 56%, #0a3b8f 100%) !important;
+  border-color:#b7dcff !important;
+}
+
+body.streamer-page .queue-actions .btn:hover,
+body.streamer-page #bulkPlayedBtn:hover,
+body.streamer-page #bulkRemoveBtn:hover,
+body.streamer-page [data-songid]:hover{
+  transform:translateY(-1px) !important;
+  filter:brightness(1.05) !important;
 }

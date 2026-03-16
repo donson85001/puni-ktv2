@@ -1,4 +1,4 @@
-const API = "https://script.google.com/macros/s/AKfycbybndsLOSY0jdSG5mGRymWErC-SHATmnOnlKQDj6ZKlr6HkvLbOffeGSObLrAOR62ex/exec";
+const API = "https://script.google.com/macros/s/AKfycbyibLxklwphu68CMJfW1wf1njIqtpsGPQlL6OQ5U0VFD5v814ndPsw12J2S_AhTtZM/exec";
 
 function esc(s){
   return String(s ?? "").replace(/[&<>\"]/g, ch => ({

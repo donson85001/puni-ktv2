@@ -10,6 +10,8 @@ let settings = { obs_limit: 30 };
 let mainCat = '女歌手';
 let subCat = '全部';
 let leaderboardPage = 1;
+let queueActionBusy = false;
+let bulkPlayedBusy = false;
 
 const MAIN_CATS = ['女歌手','男歌手','其他'];
 const OTHER_SUBTAGS = ['日','英','韓','Rap','情歌對唱','嗨歌/怪歌','舞蹈'];
@@ -61,6 +63,53 @@ function setStatus(t){
 
 function setGateMsg(t){
   if($('gateMsg')) $('gateMsg').textContent=t;
+}
+
+
+function setBulkLoading(isLoading, label=''){
+  const btn = $('bulkPlayedBtn');
+  if(!btn) return;
+  btn.disabled = !!isLoading || queueActionBusy;
+  btn.textContent = isLoading ? (label || '處理中…') : '一鍵全部 +1';
+}
+
+function appendBulkLog(message){
+  const box = $('bulkLog') || $('bulkLogList') || $('bulkLogBox');
+  if(!box) return;
+
+  const line = `[${new Date().toLocaleTimeString('zh-TW', { hour12:false })}] ${message}`;
+
+  if(box.tagName === 'TEXTAREA'){
+    box.value = line + "\n" + box.value;
+    return;
+  }
+
+  const row = document.createElement('div');
+  row.textContent = line;
+  box.prepend(row);
+}
+
+function lockQueueActions(){
+  queueActionBusy = true;
+
+  document.querySelectorAll('[data-remove],[data-played],[data-current],[data-up],[data-down]').forEach(btn=>{
+    btn.disabled = true;
+  });
+
+  const bulkRemoveBtn = $('bulkRemoveBtn');
+  if(bulkRemoveBtn) bulkRemoveBtn.disabled = true;
+
+  setBulkLoading(bulkPlayedBusy, bulkPlayedBusy ? '處理中…' : '一鍵全部 +1');
+}
+
+function unlockQueueActions(){
+  queueActionBusy = false;
+
+  const bulkRemoveBtn = $('bulkRemoveBtn');
+  if(bulkRemoveBtn) bulkRemoveBtn.disabled = false;
+
+  setBulkLoading(bulkPlayedBusy, bulkPlayedBusy ? '處理中…' : '一鍵全部 +1');
+  renderQueue();
 }
 
 /* 只保留一條 current，其餘全部普通樣式 */
@@ -495,12 +544,12 @@ function renderQueue(){
           <div class="queue-meta-line">${who}</div>
         </div>
         <div class="queue-actions">
-          <button class="btn btn-mini btn-primary btn-icon" title="設成現在播放" data-current="${esc(q.id)}" ${current?'disabled':''}>▶</button>
+          <button class="btn btn-mini btn-primary btn-icon" title="設成現在播放" data-current="${esc(q.id)}" ${current || queueActionBusy ? 'disabled':''}>▶</button>
           <button class="btn btn-mini btn-yt" title="搜尋 YouTube" data-yt="${ytQuery}">YT</button>
-          <button class="btn btn-mini" data-up="${esc(q.id)}">▲</button>
-          <button class="btn btn-mini" data-down="${esc(q.id)}">▼</button>
-          <button class="btn btn-mini btn-primary" data-played="${esc(q.id)}">單首 +1</button>
-          <button class="btn btn-mini btn-danger" data-remove="${esc(q.id)}">移除</button>
+          <button class="btn btn-mini" data-up="${esc(q.id)}" ${queueActionBusy ? 'disabled':''}>▲</button>
+          <button class="btn btn-mini" data-down="${esc(q.id)}" ${queueActionBusy ? 'disabled':''}>▼</button>
+          <button class="btn btn-mini btn-primary" data-played="${esc(q.id)}" ${queueActionBusy ? 'disabled':''}>單首 +1</button>
+          <button class="btn btn-mini btn-danger" data-remove="${esc(q.id)}" ${queueActionBusy ? 'disabled':''}>移除</button>
         </div>
       </div>
     `;
@@ -508,29 +557,29 @@ function renderQueue(){
 
   box.querySelectorAll('[data-current]').forEach(btn=>{
     btn.onclick=async()=>{
+      if(queueActionBusy){
+        alert('目前有其他播放清單操作進行中，請稍候。');
+        return;
+      }
+
       const nextId = btn.dataset.current;
       const prevId = currentQueueId;
 
       try{
+        lockQueueActions();
         btn.disabled = true;
 
         await api('setcurrent', { queueId: nextId });
 
         currentQueueId = nextId;
         renderQueue();
-
-        setTimeout(async () => {
-          try{
-            await syncFast(true);
-          }catch(_){}
-        }, 300);
-
+        await syncFast(true);
       }catch(e){
         currentQueueId = prevId;
         renderQueue();
         alert('設成現在播放失敗：' + (e?.message || String(e)));
       }finally{
-        btn.disabled = false;
+        unlockQueueActions();
       }
     };
   });
@@ -543,39 +592,89 @@ function renderQueue(){
 
   box.querySelectorAll('[data-up]').forEach(btn=>{
     btn.onclick=async()=>{
-      await api('movequeue',{queueId:btn.dataset.up,direction:'up'});
-      await syncFast(true);
+      if(queueActionBusy){
+        alert('目前有其他播放清單操作進行中，請稍候。');
+        return;
+      }
+
+      try{
+        lockQueueActions();
+        await api('movequeue',{queueId:btn.dataset.up,direction:'up'});
+        await syncFast(true);
+      }catch(e){
+        alert('上移失敗：' + (e?.message || String(e)));
+      }finally{
+        unlockQueueActions();
+      }
     };
   });
 
   box.querySelectorAll('[data-down]').forEach(btn=>{
     btn.onclick=async()=>{
-      await api('movequeue',{queueId:btn.dataset.down,direction:'down'});
-      await syncFast(true);
+      if(queueActionBusy){
+        alert('目前有其他播放清單操作進行中，請稍候。');
+        return;
+      }
+
+      try{
+        lockQueueActions();
+        await api('movequeue',{queueId:btn.dataset.down,direction:'down'});
+        await syncFast(true);
+      }catch(e){
+        alert('下移失敗：' + (e?.message || String(e)));
+      }finally{
+        unlockQueueActions();
+      }
     };
   });
 
   box.querySelectorAll('[data-played]').forEach(btn=>{
     btn.onclick=async()=>{
+      if(queueActionBusy){
+        alert('目前有其他播放清單操作進行中，請稍候。');
+        return;
+      }
+
       const id = btn.dataset.played;
       const item = queue.find(x=>String(x.id)===String(id));
 
-      await api('removequeue',{queueId:id});
+      try{
+        lockQueueActions();
+        btn.disabled = true;
+        setStatus(`單首 +1 處理中：${item?.title || id}`);
 
-      await api('played',{
-        queueId:id,
-        title:item?.title||'',
-        artist:item?.artist||''
-      });
+        const res = await api('finishqueue', { queueId:id });
 
-      await syncAll(true);
+        if(!res.ok){
+          throw new Error(res.error || 'finishqueue failed');
+        }
+
+        await syncAll(true);
+        alert(`單首 +1 完成：${item?.title || '已完成'}`);
+      }catch(e){
+        alert('單首 +1 失敗：' + (e?.message || String(e)));
+      }finally{
+        unlockQueueActions();
+      }
     };
   });
 
   box.querySelectorAll('[data-remove]').forEach(btn=>{
     btn.onclick=async()=>{
-      await api('removequeue',{queueId:btn.dataset.remove});
-      await syncFast(true);
+      if(queueActionBusy){
+        alert('目前有其他播放清單操作進行中，請稍候。');
+        return;
+      }
+
+      try{
+        lockQueueActions();
+        await api('removequeue',{queueId:btn.dataset.remove});
+        await syncFast(true);
+      }catch(e){
+        alert('移除失敗：' + (e?.message || String(e)));
+      }finally{
+        unlockQueueActions();
+      }
     };
   });
 
@@ -779,7 +878,7 @@ async function syncFast(force){
     queue = newQueue;
     currentQueueId = newCurrentQueueId;
 
-    if(force || (currentPage==='queue' && (queueChanged || currentChanged))){
+    if(!queueActionBusy && (force || (currentPage==='queue' && (queueChanged || currentChanged)))){
       renderQueue();
       lastQueueFingerprint = newFingerprint;
       lastRenderedCurrentQueueId = newCurrentQueueId;
@@ -877,25 +976,73 @@ function openObsUrl(page){
 }
 
 async function bulkPlayedQueue(){
-  if(!queue.length) return;
-
-  for(const q of queue){
-    await api('removequeue',{queueId:q.id});
-
-    await api('played',{
-      queueId:q.id,
-      title:q.title||'',
-      artist:q.artist||''
-    });
+  if(queueActionBusy){
+    alert('目前有其他播放清單操作進行中，請稍候。');
+    return;
   }
 
-  await syncFast(true);
+  if(bulkPlayedBusy){
+    alert('一鍵全部 +1 還在處理中，請等目前這次完成。');
+    return;
+  }
+
+  if(!queue.length){
+    alert('目前 Queue 是空的，沒有可以 +1 的歌曲。');
+    return;
+  }
+
+  const total = queue.length;
+
+  bulkPlayedBusy = true;
+  lockQueueActions();
+  setBulkLoading(true, `處理中 0/${total}`);
+  setStatus(`一鍵全部 +1 處理中：0/${total}`);
+  appendBulkLog(`開始一鍵全部 +1，共 ${total} 首`);
+
+  try{
+    const res = await api('bulkcomplete');
+
+    if(!res.ok){
+      throw new Error(res.error || 'bulkcomplete failed');
+    }
+
+    const processed = Number(res?.data?.processed || total);
+
+    setBulkLoading(true, `處理中 ${processed}/${total}`);
+    appendBulkLog(`批次完成：成功 ${processed} 首，失敗 0 首`);
+
+    await syncAll(true);
+
+    setStatus(`一鍵全部 +1 完成：成功 ${processed} 首`);
+    alert(`一鍵全部 +1 完成，共成功 ${processed} 首。`);
+  }catch(e){
+    setStatus('一鍵全部 +1 失敗：' + (e?.message || String(e)));
+    appendBulkLog('批次失敗：' + (e?.message || String(e)));
+    alert('一鍵全部 +1 失敗：' + (e?.message || String(e)));
+  }finally{
+    bulkPlayedBusy = false;
+    setBulkLoading(false);
+    unlockQueueActions();
+  }
 }
 
 async function bulkRemoveQueue(){
+  if(queueActionBusy){
+    alert('目前有其他播放清單操作進行中，請稍候。');
+    return;
+  }
+
   if(!queue.length) return;
-  await api('bulkremove');
-  await syncFast(true);
+
+  try{
+    lockQueueActions();
+    await api('bulkremove');
+    await syncFast(true);
+  }catch(e){
+    alert('一鍵清空失敗：' + (e?.message || String(e)));
+  }finally{
+    unlockQueueActions();
+  }
 }
 
 window.addEventListener('resize', debounce(()=>{

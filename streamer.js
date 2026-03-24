@@ -7,13 +7,13 @@ let songs = [];
 let queue = [];
 let wishList = [];
 let settings = { obs_limit: 30 };
-let mainCat = '女歌手';
+let mainCat = '全部';
 let subCat = '全部';
 let leaderboardPage = 1;
 let queueActionBusy = false;
 let bulkPlayedBusy = false;
 
-const MAIN_CATS = ['女歌手','男歌手','其他'];
+const MAIN_CATS = ['全部','女歌手','男歌手','其他'];
 const OTHER_SUBTAGS = ['日','英','韓','Rap','情歌對唱','嗨歌/怪歌','舞蹈'];
 const OBS_LIMITS = [5,10,15,20,25,30];
 const OBS_PAGE_SIZE = 15;
@@ -241,7 +241,13 @@ function rebuildSubtagChips(){
 }
 
 function filterSongsByCategory(list){
-  let out=list.filter(s=>s.category===mainCat);
+  let out;
+
+  if(mainCat === '全部'){
+    out = [...list];
+  }else{
+    out = list.filter(s => s.category === mainCat);
+  }
 
   if((mainCat==='女歌手'||mainCat==='男歌手')&&subCat!=='全部'){
     if(subCat==='其他(單曲歌手)'){

@@ -184,3 +184,18 @@ async function syncSlow(force){
     if(force || currentPage === 'songs') renderSongs();
   }catch(e){}
 }
+const API_BASE = "https://script.google.com/macros/s/AKfycbyibLxklwphu68CMJfW1wf1njIqtpsGPQlL6OQ5U0VFD5v814ndPsw12J2S_AhTtZM/exec"; //
+
+async function api(action, params = {}){
+  const url = new URL(API_BASE);
+  url.searchParams.set("action", action);
+
+  Object.entries(params).forEach(([k,v])=>{
+    url.searchParams.set(k, v);
+  });
+
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("API錯誤");
+
+  return res.json();
+}

@@ -930,13 +930,9 @@ async function syncSlow(force){
       api('settings')
     ]);
 
-    // songs：同時容錯「直接回陣列」或「{ data: [...] }」
     songs = Array.isArray(s1) ? s1 : (Array.isArray(s1?.data) ? s1.data : []);
-
-    // wish_list：同樣容錯
     wishList = Array.isArray(w1) ? w1 : (Array.isArray(w1?.data) ? w1.data : []);
 
-    // settings：同樣容錯
     const settingsData =
       (st && typeof st === 'object' && !Array.isArray(st))
         ? (st.data && typeof st.data === 'object' ? st.data : st)

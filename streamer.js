@@ -155,11 +155,13 @@ function logout(){
 }
 
 function enterApp(){
-  authed=true;
-  $('gate').style.display='none';
-  $('app').style.display='block';
+  authed = true;
+  $('gate').style.display = 'none';
+  $('app').style.display = 'block';
 
-  syncAll(true);
+  // 跟觀眾頁一樣，先各自啟動同步
+  syncSlow(true);
+  syncFast(true);
 
   setInterval(()=>{
     if(authed) syncFast(false);
@@ -674,7 +676,7 @@ function renderSongs(){
 if(!songs.length){
   rebuildMainCatChips();
   rebuildSubtagChips();
-  grid.innerHTML = '<div class="empty-state">目前沒有歌單資料</div>';
+  grid.innerHTML = '<div class="empty-state">歌曲載入中…</div>';
   return;
 }
 

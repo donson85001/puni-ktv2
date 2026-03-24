@@ -130,14 +130,18 @@ function rebuildSubtagChips(){
   if(!box) return;
   box.innerHTML = '';
 
+  // 大分類是「全部」時，直接不顯示任何小分類
+  if(mainCat === '全部'){
+    subCat = '全部';
+    return;
+  }
+
   let tags = ['全部'];
 
   if(mainCat === '女歌手' || mainCat === '男歌手'){
     tags = ['全部', ...buildSingerSubtags(songs, mainCat)];
   }else if(mainCat === '其他'){
     tags = ['全部', ...OTHER_SUBTAGS];
-  }else{
-    tags = ['全部'];
   }
 
   tags.forEach(tag => {
@@ -152,7 +156,6 @@ function rebuildSubtagChips(){
     box.appendChild(b);
   });
 }
-
 
 function fitQueueSongNames(scope=document){
   const rows = scope.querySelectorAll('.queue-row');

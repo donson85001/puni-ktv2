@@ -669,6 +669,44 @@ function renderQueue(){
   lastRenderedCurrentQueueId = String(currentQueueId || '');
 }
 
+
+function makeSongCard(s){
+  return `
+    <div class="song-card">
+      <div class="song-title">
+        ${esc(s.title || '')}${s.practice ? ' <span class="badge">⭐ 練習中</span>' : ''}
+      </div>
+      <div class="song-artist">${esc(s.artist || s.subtag || '')}</div>
+      <div class="song-actions">
+        <span class="pill">${esc(s.category || '')}</span>
+        <span class="pill">播放 ${Number(s.plays || 0)}</span>
+        <button class="btn btn-mini btn-primary" data-songid="${esc(s.id)}">加入 Queue</button>
+      </div>
+    </div>
+  `;
+}
+
+function wireSongButtons(scope=document){
+  scope.querySelectorAll('[data-songid]').forEach(btn=>{
+    btn.onclick = async()=>{
+      const songId = btn.dataset.songid;
+      if(!songId) return;
+
+      try{
+        btn.disabled = true;
+        await api('queue_add', { songId });
+        await syncFast(true);
+        alert('已加入 Queue');
+      }catch(e){
+        alert('加入 Queue 失敗：' + (e?.message || String(e)));
+      }finally{
+        btn.disabled = false;
+      }
+    };
+  });
+}
+
+
 function renderSongs(){
   const grid=$('songGrid');
   if(!grid) return;

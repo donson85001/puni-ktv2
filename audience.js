@@ -125,7 +125,33 @@ function buildSingerSubtags(allSongs, category){
   ];
 }
 
-rebuildSubtagChips
+function rebuildSubtagChips(){
+  const box = $('catChips');
+  if(!box) return;
+  box.innerHTML = '';
+
+  let tags = ['全部'];
+
+  if(mainCat === '女歌手' || mainCat === '男歌手'){
+    tags = ['全部', ...buildSingerSubtags(songs, mainCat)];
+  }else if(mainCat === '其他'){
+    tags = ['全部', ...OTHER_SUBTAGS];
+  }else{
+    tags = ['全部'];
+  }
+
+  tags.forEach(tag => {
+    const b = document.createElement('button');
+    b.className = 'chip ' + (tag === subCat ? 'chip-active' : '');
+    b.textContent = tag;
+    b.onclick = () => {
+      subCat = tag;
+      rebuildSubtagChips();
+      renderSongs();
+    };
+    box.appendChild(b);
+  });
+}
 
 
 function fitQueueSongNames(scope=document){

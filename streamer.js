@@ -204,7 +204,7 @@ function buildSingerSubtags(allSongs, category){
     .filter(s => s.category === category)
     .forEach(s => {
       const a = (s.artist || '').trim();
-      if(a) count[a] = (count[a] || 0) + 1;
+      if (a) count[a] = (count[a] || 0) + 1;
     });
 
   return [
@@ -220,7 +220,6 @@ function rebuildSubtagChips(){
   if(!box) return;
   box.innerHTML = '';
 
-  // 大分類是「全部」時，不顯示任何小分類
   if(mainCat === '全部'){
     subCat = '全部';
     return;

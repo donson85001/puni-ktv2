@@ -923,16 +923,26 @@ async function syncFast(force){
 }
 
 async function syncSlow(force){
+  let slowError = null;
+
   try{
-    const [s1, w1, st] = await Promise.all([
-      api('songs'),
-      api('wish_list'),
-      api('settings')
-    ]);
-
+    const s1 = await api('songs');
     songs = Array.isArray(s1) ? s1 : (Array.isArray(s1?.data) ? s1.data : []);
-    wishList = Array.isArray(w1) ? w1 : (Array.isArray(w1?.data) ? w1.data : []);
+  }catch(e){
+    slowError = 'songs：' + (e?.message || String(e));
+    songs = [];
+  }
 
+  try{
+    const w1 = await api('wish_list');
+    wishList = Array.isArray(w1) ? w1 : (Array.isArray(w1?.data) ? w1.data : []);
+  }catch(e){
+    if(!slowError) slowError = 'wish_list：' + (e?.message || String(e));
+    wishList = [];
+  }
+
+  try{
+    const st = await api('settings');
     const settingsData =
       (st && typeof st === 'object' && !Array.isArray(st))
         ? (st.data && typeof st.data === 'object' ? st.data : st)
@@ -942,20 +952,26 @@ async function syncSlow(force){
       obs_limit: Number(settingsData.obs_limit || 30),
       ...settingsData
     };
-
-    if(!OBS_LIMITS.includes(Number(settings.obs_limit))) settings.obs_limit = 30;
-
-    buildObsControls();
-    updateObsUrl();
-
-    if(force || currentPage === 'songs') renderSongs();
-    if(force || currentPage === 'leaderboard') renderLeaderboard();
-    if(force || currentPage === 'wish') renderWishList();
-
-    setStatus('已同步：' + new Date().toLocaleTimeString());
   }catch(e){
-    setStatus('同步失敗：' + (e?.message || String(e)));
+    if(!slowError) slowError = 'settings：' + (e?.message || String(e));
+    settings = { obs_limit: 30 };
   }
+
+  if(!OBS_LIMITS.includes(Number(settings.obs_limit))) settings.obs_limit = 30;
+
+  buildObsControls();
+  updateObsUrl();
+
+  if(force || currentPage === 'songs') renderSongs();
+  if(force || currentPage === 'leaderboard') renderLeaderboard();
+  if(force || currentPage === 'wish') renderWishList();
+
+  if(slowError){
+    setStatus('部分同步失敗：' + slowError);
+    return;
+  }
+
+  setStatus('已同步：' + new Date().toLocaleTimeString());
 }
 
 async function syncAll(force){

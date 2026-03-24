@@ -199,23 +199,54 @@ function rebuildMainCatChips(){
 }
 
 function buildSingerSubtags(allSongs, category){
-  const count={};
-
+  const count = {};
   allSongs
-    .filter(s=>s.category===category)
-    .forEach(s=>{
-      const a=(s.artist||'').trim();
-      if(a) count[a]=(count[a]||0)+1;
+    .filter(s => s.category === category)
+    .forEach(s => {
+      const a = (s.artist || '').trim();
+      if(a) count[a] = (count[a] || 0) + 1;
     });
 
   return [
     ...Object.keys(count)
-      .filter(a=>count[a]>=2)
-      .sort((a,b)=>a.localeCompare(b,'zh-Hant')),
+      .filter(a => count[a] >= 2)
+      .sort((a, b) => a.localeCompare(b, 'zh-Hant')),
     '其他(單曲歌手)'
   ];
 }
 
+function rebuildSubtagChips(){
+  const box = $('catChips');
+  if(!box) return;
+  box.innerHTML = '';
+
+  // 大分類是「全部」時，不顯示任何小分類
+  if(mainCat === '全部'){
+    subCat = '全部';
+    return;
+  }
+
+  let subtags = [];
+  if(mainCat === '女歌手' || mainCat === '男歌手'){
+    subtags = buildSingerSubtags(songs, mainCat);
+  }else if(mainCat === '其他'){
+    subtags = OTHER_SUBTAGS;
+  }
+
+  ['全部', ...subtags].forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'chip ' + (t === subCat ? 'chip-active' : '');
+    b.textContent = t;
+    b.onclick = () => {
+      subCat = t;
+      rebuildSubtagChips();
+      renderSongs();
+    };
+    box.appendChild(b);
+  });
+}
+
+function filterSongsByCategory(list){
 function rebuildSubtagChips(){
   const box = $('catChips');
   if(!box) return;

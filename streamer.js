@@ -767,43 +767,94 @@ function renderLeaderboard(){
   wireSongButtons(box);
 }
 
+function getTaipeiPartsFromDate(value){
+  const d = new Date(value);
+  if(Number.isNaN(d.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(d);
+
+  const map = {};
+  parts.forEach(p => {
+    if(p.type !== 'literal') map[p.type] = p.value;
+  });
+
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+    hour: Number(map.hour),
+    minute: Number(map.minute),
+    second: Number(map.second)
+  };
+}
+
 function parseWishDate(dateValue, timeValue){
   const rawDate = String(dateValue || '').trim();
   const rawTime = String(timeValue || '').trim();
 
   if(!rawDate && !rawTime) return null;
 
-  let year = '';
-  let month = '';
-  let day = '';
-
-  const ymd = rawDate.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-  if(ymd){
-    year = Number(ymd[1]);
-    month = Number(ymd[2]);
-    day = Number(ymd[3]);
-  }else{
-    const dateObj = new Date(rawDate);
-    if(!Number.isNaN(dateObj.getTime())){
-      year = dateObj.getFullYear();
-      month = dateObj.getMonth() + 1;
-      day = dateObj.getDate();
-    }
-  }
-
+  let year = 0;
+  let month = 0;
+  let day = 0;
   let hour = 0;
   let minute = 0;
   let second = 0;
 
-  const zhTime = rawTime.match(/(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if(zhTime){
-    hour = Number(zhTime[2]);
-    minute = Number(zhTime[3]);
-    second = Number(zhTime[4] || 0);
+  // 1) 日期：先處理 Apps Script / Sheet 送來的 ISO 字串
+  if(rawDate.includes('T')){
+    const p = getTaipeiPartsFromDate(rawDate);
+    if(p){
+      year = p.year;
+      month = p.month;
+      day = p.day;
+    }
+  }
 
-    if(zhTime[1] === '下午' && hour < 12) hour += 12;
-    if(zhTime[1] === '上午' && hour === 12) hour = 0;
-  }else{
+  // 2) 日期：一般 yyyy/MM/dd 或 yyyy-MM-dd
+  if(!year || !month || !day){
+    const ymd = rawDate.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if(ymd){
+      year = Number(ymd[1]);
+      month = Number(ymd[2]);
+      day = Number(ymd[3]);
+    }
+  }
+
+  // 3) 時間：先處理 ISO 字串（例如 1899-12-30T15:21:58.000Z）
+  if(rawTime.includes('T')){
+    const p = getTaipeiPartsFromDate(rawTime);
+    if(p){
+      hour = p.hour;
+      minute = p.minute;
+      second = p.second;
+    }
+  }
+
+  // 4) 時間：中文 上午/下午
+  if(rawTime && hour === 0 && minute === 0 && second === 0){
+    const zhTime = rawTime.match(/(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if(zhTime){
+      hour = Number(zhTime[2]);
+      minute = Number(zhTime[3]);
+      second = Number(zhTime[4] || 0);
+
+      if(zhTime[1] === '下午' && hour < 12) hour += 12;
+      if(zhTime[1] === '上午' && hour === 12) hour = 0;
+    }
+  }
+
+  // 5) 時間：一般 HH:mm:ss
+  if(rawTime && hour === 0 && minute === 0 && second === 0){
     const normalTime = rawTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if(normalTime){
       hour = Number(normalTime[1]);
@@ -813,27 +864,23 @@ function parseWishDate(dateValue, timeValue){
   }
 
   if(year && month && day){
-    return new Date(year, month - 1, day, hour, minute, second);
+    return { year, month, day, hour, minute, second };
   }
-
-  const fallback = new Date(`${rawDate} ${rawTime}`);
-  if(!Number.isNaN(fallback.getTime())) return fallback;
 
   return null;
 }
 
 function formatWishDateTime(dateValue, timeValue){
   const d = parseWishDate(dateValue, timeValue);
-
   if(!d) return '';
 
-  const month = String(d.getMonth() + 1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
+  const month = String(d.month).padStart(2, '0');
+  const day = String(d.day).padStart(2, '0');
 
-  let hour = d.getHours();
-  const minute = String(d.getMinutes()).padStart(2,'0');
+  let hour = Number(d.hour || 0);
+  const minute = String(d.minute || 0).padStart(2, '0');
+
   const period = hour >= 12 ? 'PM' : 'AM';
-
   hour = hour % 12 || 12;
 
   return `${month}/${day}・${period} ${hour}:${minute}`;

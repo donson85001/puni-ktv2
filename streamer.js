@@ -218,12 +218,17 @@ function buildSingerSubtags(allSongs, category){
 function rebuildSubtagChips(){
   const box = $('catChips');
   if (!box) return;
+
   box.innerHTML = '';
 
+  // 大分類是「全部」時，小分類整塊直接隱藏
   if (mainCat === '全部') {
     subCat = '全部';
+    box.classList.add('hidden');
     return;
   }
+
+  box.classList.remove('hidden');
 
   let subtags = [];
   if (mainCat === '女歌手' || mainCat === '男歌手') {
@@ -666,10 +671,12 @@ function renderSongs(){
   const grid=$('songGrid');
   if(!grid) return;
 
-  if(!songs.length){
-    grid.innerHTML='<div class="empty-state">歌曲載入中…</div>';
-    return;
-  }
+if(!songs.length){
+  rebuildMainCatChips();
+  rebuildSubtagChips();
+  grid.innerHTML = '<div class="empty-state">目前沒有歌單資料</div>';
+  return;
+}
 
   rebuildMainCatChips();
   rebuildSubtagChips();
@@ -917,28 +924,41 @@ async function syncFast(force){
 
 async function syncSlow(force){
   try{
-    const [s1,w1,st]=await Promise.all([
+    const [s1, w1, st] = await Promise.all([
       api('songs'),
       api('wish_list'),
       api('settings')
     ]);
 
-    songs=s1.data||[];
-    wishList=w1.data||[];
-    settings={ obs_limit:Number((st.data||{}).obs_limit||30), ...(st.data||{}) };
+    // songs：同時容錯「直接回陣列」或「{ data: [...] }」
+    songs = Array.isArray(s1) ? s1 : (Array.isArray(s1?.data) ? s1.data : []);
+
+    // wish_list：同樣容錯
+    wishList = Array.isArray(w1) ? w1 : (Array.isArray(w1?.data) ? w1.data : []);
+
+    // settings：同樣容錯
+    const settingsData =
+      (st && typeof st === 'object' && !Array.isArray(st))
+        ? (st.data && typeof st.data === 'object' ? st.data : st)
+        : {};
+
+    settings = {
+      obs_limit: Number(settingsData.obs_limit || 30),
+      ...settingsData
+    };
 
     if(!OBS_LIMITS.includes(Number(settings.obs_limit))) settings.obs_limit = 30;
 
     buildObsControls();
     updateObsUrl();
 
-    if(force||currentPage==='songs') renderSongs();
-    if(force||currentPage==='leaderboard') renderLeaderboard();
-    if(force||currentPage==='wish') renderWishList();
+    if(force || currentPage === 'songs') renderSongs();
+    if(force || currentPage === 'leaderboard') renderLeaderboard();
+    if(force || currentPage === 'wish') renderWishList();
 
-    setStatus('已同步：'+new Date().toLocaleTimeString());
+    setStatus('已同步：' + new Date().toLocaleTimeString());
   }catch(e){
-    setStatus('同步失敗：'+(e?.message||String(e)));
+    setStatus('同步失敗：' + (e?.message || String(e)));
   }
 }
 

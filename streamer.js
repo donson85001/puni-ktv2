@@ -217,47 +217,19 @@ function buildSingerSubtags(allSongs, category){
 
 function rebuildSubtagChips(){
   const box = $('catChips');
-  if(!box) return;
+  if (!box) return;
   box.innerHTML = '';
 
-  if(mainCat === '全部'){
+  if (mainCat === '全部') {
     subCat = '全部';
     return;
   }
 
   let subtags = [];
-  if(mainCat === '女歌手' || mainCat === '男歌手'){
+  if (mainCat === '女歌手' || mainCat === '男歌手') {
     subtags = buildSingerSubtags(songs, mainCat);
-  }else if(mainCat === '其他'){
+  } else if (mainCat === '其他') {
     subtags = OTHER_SUBTAGS;
-  }
-
-  ['全部', ...subtags].forEach(t => {
-    const b = document.createElement('button');
-    b.className = 'chip ' + (t === subCat ? 'chip-active' : '');
-    b.textContent = t;
-    b.onclick = () => {
-      subCat = t;
-      rebuildSubtagChips();
-      renderSongs();
-    };
-    box.appendChild(b);
-  });
-}
-
-function filterSongsByCategory(list){
-function rebuildSubtagChips(){
-  const box = $('catChips');
-  if(!box) return;
-  box.innerHTML = '';
-
-  let subtags = [];
-  if(mainCat === '女歌手' || mainCat === '男歌手'){
-    subtags = buildSingerSubtags(songs, mainCat);
-  }else if(mainCat === '其他'){
-    subtags = OTHER_SUBTAGS;
-  }else{
-    subtags = [];
   }
 
   ['全部', ...subtags].forEach(t => {
@@ -276,35 +248,31 @@ function rebuildSubtagChips(){
 function filterSongsByCategory(list){
   let out;
 
-  if(mainCat === '全部'){
+  if (mainCat === '全部') {
     out = [...list];
-  }else{
+  } else {
     out = list.filter(s => s.category === mainCat);
   }
 
-  if((mainCat==='女歌手'||mainCat==='男歌手')&&subCat!=='全部'){
-    if(subCat==='其他(單曲歌手)'){
-      const count={};
-
-      out.forEach(s=>{
-        const a=(s.artist||'').trim();
-        if(a) count[a]=(count[a]||0)+1;
+  if ((mainCat === '女歌手' || mainCat === '男歌手') && subCat !== '全部') {
+    if (subCat === '其他(單曲歌手)') {
+      const count = {};
+      out.forEach(s => {
+        const a = (s.artist || '').trim();
+        if (a) count[a] = (count[a] || 0) + 1;
       });
-
-      out=out.filter(s=>(count[(s.artist||'').trim()]||0)===1);
-    }else{
-      out=out.filter(s=>(s.artist||'').trim()===subCat);
+      out = out.filter(s => (count[(s.artist || '').trim()] || 0) === 1);
+    } else {
+      out = out.filter(s => (s.artist || '').trim() === subCat);
     }
   }
 
-  if(mainCat==='其他'&&subCat!=='全部'){
-    out=out.filter(s=>(s.subtag||'')===subCat);
+  if (mainCat === '其他' && subCat !== '全部') {
+    out = out.filter(s => (s.subtag || '') === subCat);
   }
 
   return out;
 }
-
-function makeSongCard(s){
   return `
     <div class="song-card">
       <div class="song-title">

@@ -1159,7 +1159,14 @@ async function bulkPlayedQueue(){
   try{
     let processed = 0;
 
-    while(queue.length > 0){
+    while(true){
+      // 每一輪都先跟後端同步，拿最新 queue / 最新 queueId
+      await syncFast(true);
+
+      if(!queue.length){
+        break;
+      }
+
       const item = queue[0];
       const qid = String(item?.id || '').trim();
       const title = item?.title || `第 ${processed + 1} 首`;
@@ -1167,10 +1174,10 @@ async function bulkPlayedQueue(){
       if(!qid){
         failed++;
         processed++;
-        queue.shift();
         appendBulkLog(`略過：${title}（缺少 queueId）`);
         setBulkLoading(true, `處理中 ${processed}/${total}`);
-        continue;
+        setStatus(`一鍵全部 +1 處理中：${processed}/${total}`);
+        break;
       }
 
       try{
@@ -1181,18 +1188,13 @@ async function bulkPlayedQueue(){
 
         success++;
         processed++;
-
-        queue.shift();
-        if(String(currentQueueId || '') === qid){
-          currentQueueId = String(queue[0]?.id || '');
-        }
-
-        renderQueue();
         appendBulkLog(`完成：${title}`);
       }catch(err){
         failed++;
         processed++;
         appendBulkLog(`失敗：${title}｜${err?.message || String(err)}`);
+        setBulkLoading(true, `處理中 ${processed}/${total}`);
+        setStatus(`一鍵全部 +1 處理中：${processed}/${total}`);
         break;
       }
 
@@ -1200,10 +1202,9 @@ async function bulkPlayedQueue(){
       setStatus(`一鍵全部 +1 處理中：${processed}/${total}`);
     }
 
+    await syncFast(true);
     emitLiveEvent('queue-touch');
     emitLiveEvent('current', { queueId: currentQueueId });
-
-    await syncFast(true);
 
     setStatus(`一鍵全部 +1 完成：成功 ${success} 首，失敗 ${failed} 首`);
     appendBulkLog(`批次完成：成功 ${success} 首，失敗 ${failed} 首`);

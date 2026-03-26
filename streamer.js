@@ -23,7 +23,26 @@ const FAST_MS = 2000;
 const SLOW_MS = 12000;
 const LS_AUTH = 'puni_streamer_authed';
 const $ = id => document.getElementById(id);
+const LIVE_BUS_NAME = 'puni_live_bus_v1';
+const LIVE_BUS_KEY = 'puni_live_bus_payload_v1';
+const liveBus = ('BroadcastChannel' in window) ? new BroadcastChannel(LIVE_BUS_NAME) : null;
 
+
+function emitLiveEvent(type, payload = {}) {
+  const packet = {
+    type,
+    payload,
+    ts: Date.now()
+  };
+
+  try {
+    liveBus?.postMessage(packet);
+  } catch (_) {}
+
+  try {
+    localStorage.setItem(LIVE_BUS_KEY, JSON.stringify(packet));
+  } catch (_) {}
+}
 init();
 
 function init(){
@@ -541,27 +560,40 @@ function renderQueue(){
   }).join('');
 
   box.querySelectorAll('[data-current]').forEach(btn=>{
-    btn.onclick=async()=>{
+    btn.onclick = async () => {
       if(queueActionBusy){
         alert('目前有其他播放清單操作進行中，請稍候。');
         return;
       }
 
-      const nextId = btn.dataset.current;
-      const prevId = currentQueueId;
+      const nextId = String(btn.dataset.current || '');
+      const prevId = String(currentQueueId || '');
+
+      if(!nextId || nextId === prevId) return;
 
       try{
         lockQueueActions();
         btn.disabled = true;
 
-        await api('setcurrent', { queueId: nextId });
-
+        // 先改本機畫面，讓「現在播放」立刻反應
         currentQueueId = nextId;
         renderQueue();
+
+        // 通知同機 audience / obs 立即更新
+        emitLiveEvent('current', { queueId: nextId });
+
+        // 再送後端
+        const res = await api('setcurrent', { queueId: nextId });
+        if(!res || res.ok === false){
+          throw new Error(res?.error || 'setcurrent failed');
+        }
+
+        // 最後做輕同步
         await syncFast(true);
       }catch(e){
         currentQueueId = prevId;
         renderQueue();
+        emitLiveEvent('current', { queueId: prevId });
         alert('設成現在播放失敗：' + (e?.message || String(e)));
       }finally{
         unlockQueueActions();
@@ -614,29 +646,50 @@ function renderQueue(){
   });
 
   box.querySelectorAll('[data-played]').forEach(btn=>{
-    btn.onclick=async()=>{
+    btn.onclick = async () => {
       if(queueActionBusy){
         alert('目前有其他播放清單操作進行中，請稍候。');
         return;
       }
 
-      const id = btn.dataset.played;
-      const item = queue.find(x=>String(x.id)===String(id));
+      const id = String(btn.dataset.played || '');
+      const prevQueue = [...queue];
+      const prevCurrentId = String(currentQueueId || '');
+      const item = queue.find(x => String(x.id) === id);
 
       try{
         lockQueueActions();
         btn.disabled = true;
         setStatus(`單首 +1 處理中：${item?.title || id}`);
 
-        const res = await api('finishqueue', { queueId:id });
+        // 先前端立即移除
+        queue = queue.filter(x => String(x.id) !== id);
 
-        if(!res.ok){
-          throw new Error(res.error || 'finishqueue failed');
+        if(prevCurrentId === id){
+          currentQueueId = String(queue[0]?.id || '');
         }
 
-        await syncAll(true);
-        alert(`單首 +1 完成：${item?.title || '已完成'}`);
+        renderQueue();
+
+        // 通知同機 audience / obs 立即更新
+        emitLiveEvent('queue-touch');
+        emitLiveEvent('current', { queueId: currentQueueId });
+
+        // 再送後端
+        const res = await api('finishqueue', { queueId:id });
+        if(!res || res.ok === false){
+          throw new Error(res?.error || 'finishqueue failed');
+        }
+
+        // 只做輕同步，不要 syncAll
+        await syncFast(true);
+        setStatus(`單首 +1 完成：${item?.title || '已完成'}`);
       }catch(e){
+        queue = prevQueue;
+        currentQueueId = prevCurrentId;
+        renderQueue();
+        emitLiveEvent('queue-touch');
+        emitLiveEvent('current', { queueId: prevCurrentId });
         alert('單首 +1 失敗：' + (e?.message || String(e)));
       }finally{
         unlockQueueActions();
@@ -694,9 +747,16 @@ function wireSongButtons(scope=document){
 
       try{
         btn.disabled = true;
-        await api('queue_add', { songId });
+        setStatus('加入 Queue 中…');
+
+        const res = await api('queue_add', { songId });
+        if(!res || res.ok === false){
+          throw new Error(res?.error || 'queue_add failed');
+        }
+
+        emitLiveEvent('queue-touch');
         await syncFast(true);
-        alert('已加入 Queue');
+        setStatus('已加入 Queue');
       }catch(e){
         alert('加入 Queue 失敗：' + (e?.message || String(e)));
       }finally{
@@ -1088,69 +1148,65 @@ async function bulkPlayedQueue(){
 
   let success = 0;
   let failed = 0;
-  const initialTotal = queue.length;
+  const total = queue.length;
 
   bulkPlayedBusy = true;
   lockQueueActions();
-  setBulkLoading(true, `處理中 0/${initialTotal}`);
-  setStatus(`一鍵全部 +1 處理中：0/${initialTotal}`);
-  appendBulkLog(`開始一鍵全部 +1，共 ${initialTotal} 首`);
+  setBulkLoading(true, `處理中 0/${total}`);
+  setStatus(`一鍵全部 +1 處理中：0/${total}`);
+  appendBulkLog(`開始一鍵全部 +1，共 ${total} 首`);
 
   try{
     let processed = 0;
 
-    while(true){
-      // 每輪都用最新 queue，不用舊 snapshot
-      await syncFast(true);
-
-      if(!queue.length){
-        break;
-      }
-
+    while(queue.length > 0){
       const item = queue[0];
-      const title = item?.title || `第 ${processed + 1} 首`;
       const qid = String(item?.id || '').trim();
+      const title = item?.title || `第 ${processed + 1} 首`;
 
       if(!qid){
         failed++;
         processed++;
+        queue.shift();
         appendBulkLog(`略過：${title}（缺少 queueId）`);
-
-        // 沒 id 時避免死循環：直接中止，讓你手動看
-        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
-        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
-        break;
+        setBulkLoading(true, `處理中 ${processed}/${total}`);
+        continue;
       }
 
       try{
         const res = await api('finishqueue', { queueId: qid });
-
         if(!res || res.ok === false){
           throw new Error(res?.error || 'finishqueue failed');
         }
 
         success++;
         processed++;
+
+        queue.shift();
+        if(String(currentQueueId || '') === qid){
+          currentQueueId = String(queue[0]?.id || '');
+        }
+
+        renderQueue();
         appendBulkLog(`完成：${title}`);
       }catch(err){
         failed++;
         processed++;
         appendBulkLog(`失敗：${title}｜${err?.message || String(err)}`);
-
-        // 失敗時也中止，避免一直卡在同一首
-        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
-        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
         break;
       }
 
-      setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
-      setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
+      setBulkLoading(true, `處理中 ${processed}/${total}`);
+      setStatus(`一鍵全部 +1 處理中：${processed}/${total}`);
     }
 
-    await syncAll(true);
+    emitLiveEvent('queue-touch');
+    emitLiveEvent('current', { queueId: currentQueueId });
+
+    await syncFast(true);
+
     setStatus(`一鍵全部 +1 完成：成功 ${success} 首，失敗 ${failed} 首`);
     appendBulkLog(`批次完成：成功 ${success} 首，失敗 ${failed} 首`);
-    alert(`一鍵全部 +1 完成\n成功：${success} 首\n失敗：${failed} 首`);
   }catch(e){
     setStatus('一鍵全部 +1 失敗：' + (e?.message || String(e)));
     appendBulkLog('批次失敗：' + (e?.message || String(e)));

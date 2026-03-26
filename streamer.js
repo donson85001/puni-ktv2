@@ -1086,29 +1086,40 @@ async function bulkPlayedQueue(){
     return;
   }
 
-  const snapshot = [...queue];
-  const total = snapshot.length;
   let success = 0;
   let failed = 0;
+  const initialTotal = queue.length;
 
   bulkPlayedBusy = true;
   lockQueueActions();
-  setBulkLoading(true, `處理中 0/${total}`);
-  setStatus(`一鍵全部 +1 處理中：0/${total}`);
-  appendBulkLog(`開始一鍵全部 +1，共 ${total} 首`);
+  setBulkLoading(true, `處理中 0/${initialTotal}`);
+  setStatus(`一鍵全部 +1 處理中：0/${initialTotal}`);
+  appendBulkLog(`開始一鍵全部 +1，共 ${initialTotal} 首`);
 
   try{
-    for(let i = 0; i < snapshot.length; i++){
-      const item = snapshot[i];
-      const title = item?.title || `第 ${i + 1} 首`;
+    let processed = 0;
+
+    while(true){
+      // 每輪都用最新 queue，不用舊 snapshot
+      await syncFast(true);
+
+      if(!queue.length){
+        break;
+      }
+
+      const item = queue[0];
+      const title = item?.title || `第 ${processed + 1} 首`;
       const qid = String(item?.id || '').trim();
 
       if(!qid){
         failed++;
+        processed++;
         appendBulkLog(`略過：${title}（缺少 queueId）`);
-        setBulkLoading(true, `處理中 ${i + 1}/${total}`);
-        setStatus(`一鍵全部 +1 處理中：${i + 1}/${total}`);
-        continue;
+
+        // 沒 id 時避免死循環：直接中止，讓你手動看
+        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
+        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
+        break;
       }
 
       try{
@@ -1119,18 +1130,24 @@ async function bulkPlayedQueue(){
         }
 
         success++;
+        processed++;
         appendBulkLog(`完成：${title}`);
       }catch(err){
         failed++;
+        processed++;
         appendBulkLog(`失敗：${title}｜${err?.message || String(err)}`);
+
+        // 失敗時也中止，避免一直卡在同一首
+        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
+        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
+        break;
       }
 
-      setBulkLoading(true, `處理中 ${i + 1}/${total}`);
-      setStatus(`一鍵全部 +1 處理中：${i + 1}/${total}`);
+      setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
+      setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
     }
 
     await syncAll(true);
-
     setStatus(`一鍵全部 +1 完成：成功 ${success} 首，失敗 ${failed} 首`);
     appendBulkLog(`批次完成：成功 ${success} 首，失敗 ${failed} 首`);
     alert(`一鍵全部 +1 完成\n成功：${success} 首\n失敗：${failed} 首`);

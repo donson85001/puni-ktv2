@@ -1077,18 +1077,19 @@ async function bulkPlayedQueue(){
     alert('目前有其他播放清單操作進行中，請稍候。');
     return;
   }
-
   if(bulkPlayedBusy){
     alert('一鍵全部 +1 還在處理中，請等目前這次完成。');
     return;
   }
-
   if(!queue.length){
     alert('目前 Queue 是空的，沒有可以 +1 的歌曲。');
     return;
   }
 
-  const total = queue.length;
+  const snapshot = [...queue];
+  const total = snapshot.length;
+  let success = 0;
+  let failed = 0;
 
   bulkPlayedBusy = true;
   lockQueueActions();
@@ -1097,21 +1098,42 @@ async function bulkPlayedQueue(){
   appendBulkLog(`開始一鍵全部 +1，共 ${total} 首`);
 
   try{
-    const res = await api('bulkcomplete');
+    for(let i = 0; i < snapshot.length; i++){
+      const item = snapshot[i];
+      const title = item?.title || `第 ${i + 1} 首`;
+      const qid = String(item?.id || '').trim();
 
-    if(!res.ok){
-      throw new Error(res.error || 'bulkcomplete failed');
+      if(!qid){
+        failed++;
+        appendBulkLog(`略過：${title}（缺少 queueId）`);
+        setBulkLoading(true, `處理中 ${i + 1}/${total}`);
+        setStatus(`一鍵全部 +1 處理中：${i + 1}/${total}`);
+        continue;
+      }
+
+      try{
+        const res = await api('finishqueue', { queueId: qid });
+
+        if(!res || res.ok === false){
+          throw new Error(res?.error || 'finishqueue failed');
+        }
+
+        success++;
+        appendBulkLog(`完成：${title}`);
+      }catch(err){
+        failed++;
+        appendBulkLog(`失敗：${title}｜${err?.message || String(err)}`);
+      }
+
+      setBulkLoading(true, `處理中 ${i + 1}/${total}`);
+      setStatus(`一鍵全部 +1 處理中：${i + 1}/${total}`);
     }
-
-    const processed = Number(res?.data?.processed || total);
-
-    setBulkLoading(true, `處理中 ${processed}/${total}`);
-    appendBulkLog(`批次完成：成功 ${processed} 首，失敗 0 首`);
 
     await syncAll(true);
 
-    setStatus(`一鍵全部 +1 完成：成功 ${processed} 首`);
-    alert(`一鍵全部 +1 完成，共成功 ${processed} 首。`);
+    setStatus(`一鍵全部 +1 完成：成功 ${success} 首，失敗 ${failed} 首`);
+    appendBulkLog(`批次完成：成功 ${success} 首，失敗 ${failed} 首`);
+    alert(`一鍵全部 +1 完成\n成功：${success} 首\n失敗：${failed} 首`);
   }catch(e){
     setStatus('一鍵全部 +1 失敗：' + (e?.message || String(e)));
     appendBulkLog('批次失敗：' + (e?.message || String(e)));

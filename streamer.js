@@ -678,35 +678,7 @@ function renderQueue(){
     };
   });
 
-  box.querySelectorAll('[data-played]').forEach(btn=>{
-    btn.onclick = async () => {
-      if(queueActionBusy){
-        alert('目前有其他播放清單操作進行中，請稍候。');
-        return;
-      }
-
-      const id = String(btn.dataset.played || '');
-      const prevQueue = [...queue];
-      const prevCurrentId = String(currentQueueId || '');
-      const item = queue.find(x => String(x.id) === id);
-
-      try{
-        lockQueueActions();
-        btn.disabled = true;
-        setStatus(`單首 +1 處理中：${item?.title || id}`);
-
-        // 先前端立即移除
-        queue = queue.filter(x => String(x.id) !== id);
-
-        if(prevCurrentId === id){
-          currentQueueId = String(queue[0]?.id || '');
-        }
-
-        renderQueue();
-
-        // 通知同機 audience / obs 立即更新
-        emitLiveEvent('queue-touch');
-        emitLiveEvent('current', { queueId: currentQueueId });
+  
 
   box.querySelectorAll('[data-played]').forEach(btn=>{
     btn.onclick = async () => {

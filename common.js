@@ -18,8 +18,8 @@ function debounce(fn, ms){
 }
 
 async function api(action, payload = null, opt = {}){
-  const timeoutMs = opt.timeoutMs ?? 12000;
-  const retries = opt.retries ?? 1;
+  const timeoutMs = opt.timeoutMs ?? 15000;
+  const retries = opt.retries ?? 2;
   let lastErr = null;
 
   for(let attempt = 0; attempt <= retries; attempt++){

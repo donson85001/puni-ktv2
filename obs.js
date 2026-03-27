@@ -10,6 +10,10 @@ const PAGE_SIZE = 15;
 const VALID_LIMITS = [5, 10, 15, 20, 25, 30];
 let syncing = false;
 let lastSig = '';
+let lastGoodLimit = 30;
+let hadSuccessfulSync = false;
+let settingsTick = 0;
+const SETTINGS_SYNC_EVERY = 8; // 1.5 秒 * 8 = 約 12 秒抓一次 settings
 
 if (!showTitle && headerEl) headerEl.style.display = 'none';
 
@@ -64,7 +68,12 @@ function setLimitClass(limit) {
   bodyEl.classList.add(`obs-limit-${limit}`);
 }
 
-function renderError(message) {
+function renderError(message, keepLastScreen = false) {
+  if (keepLastScreen && hadSuccessfulSync) {
+    if (syncTextEl) syncTextEl.textContent = `同步失敗，保留上一份畫面：${message}`;
+    return;
+  }
+
   listEl.innerHTML = `
     <div class="obs-item fixed-obs-item is-error is-current">
       <div class="obs-main fixed-obs-main">
@@ -75,21 +84,42 @@ function renderError(message) {
   `;
   if (syncTextEl) syncTextEl.textContent = '同步失敗';
 }
-
 async function sync(force) {
   if (syncing) return;
   syncing = true;
 
   try {
-    const [queueRes, settingsRes] = await Promise.all([
-      api('queue'),
-      api('settings').catch(() => ({ data: { obs_limit: 30 } }))
+    const shouldFetchSettings = force || !hadSuccessfulSync || settingsTick <= 0;
+    if (shouldFetchSettings) {
+      settingsTick = SETTINGS_SYNC_EVERY;
+    } else {
+      settingsTick -= 1;
+    }
+
+    const queuePromise = api('queue', null, { timeoutMs: 15000, retries: 2 });
+    const settingsPromise = shouldFetchSettings
+      ? api('settings', null, { timeoutMs: 12000, retries: 1 })
+      : Promise.resolve({ data: { obs_limit: lastGoodLimit } });
+
+    const [queueResult, settingsResult] = await Promise.allSettled([
+      queuePromise,
+      settingsPromise
     ]);
 
-    const fullQueue = queueRes.data || [];
-    const currentQueueId = String(queueRes.currentQueueId || '');
-    const limit = normalizeLimit(settingsRes?.data?.obs_limit);
+    if (queueResult.status !== 'fulfilled') {
+      throw queueResult.reason || new Error('queue sync failed');
+    }
 
+    const queueRes = queueResult.value;
+    const fullQueue = Array.isArray(queueRes?.data) ? queueRes.data : [];
+    const currentQueueId = String(queueRes?.currentQueueId || '');
+
+    let limit = lastGoodLimit;
+    if (settingsResult.status === 'fulfilled') {
+      limit = normalizeLimit(settingsResult.value?.data?.obs_limit);
+    }
+
+    lastGoodLimit = limit;
     setLimitClass(limit);
 
     const limitedQueue = fullQueue.slice(0, limit);
@@ -110,11 +140,17 @@ async function sync(force) {
       scheduleObsMarqueeRefresh(listEl);
     }
 
+    hadSuccessfulSync = true;
+
     if (syncTextEl) {
-      syncTextEl.textContent = `已同步：${new Date().toLocaleTimeString()}｜上限 ${limit} 首`;
+      if (settingsResult.status === 'rejected') {
+        syncTextEl.textContent = `已同步：${new Date().toLocaleTimeString()}｜歌單正常｜設定暫時讀取失敗`;
+      } else {
+        syncTextEl.textContent = `已同步：${new Date().toLocaleTimeString()}｜上限 ${limit} 首`;
+      }
     }
   } catch (e) {
-    renderError(e?.message || String(e));
+    renderError(e?.message || String(e), true);
   } finally {
     syncing = false;
   }

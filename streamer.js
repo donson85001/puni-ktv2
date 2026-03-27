@@ -149,7 +149,40 @@ function queueState(q, idx){
 
   return 'pending';
 }
+function getCurrentQueueIndex(list, fallbackCurrentId = currentQueueId){
+  const currentId = String(fallbackCurrentId || '');
 
+  if(currentId){
+    const exactIdx = list.findIndex(x => String(x.id || '') === currentId);
+    if(exactIdx >= 0) return exactIdx;
+  }
+
+  const flaggedIdx = list.findIndex(x =>
+    x.isCurrent || String(x.status || '') === 'current'
+  );
+  if(flaggedIdx >= 0) return flaggedIdx;
+
+  return list.length ? 0 : -1;
+}
+
+function getQueueItemForFinish(list, fallbackCurrentId = currentQueueId){
+  const idx = getCurrentQueueIndex(list, fallbackCurrentId);
+  if(idx < 0 || !list[idx]) return null;
+  return {
+    idx,
+    item: list[idx]
+  };
+}
+
+function getQueueItemById(list, queueId){
+  const id = String(queueId || '');
+  const idx = list.findIndex(x => String(x.id || '') === id);
+  if(idx < 0 || !list[idx]) return null;
+  return {
+    idx,
+    item: list[idx]
+  };
+}
 async function login(){
   const pw=($('pw')?.value||'').trim();
 
@@ -675,21 +708,58 @@ function renderQueue(){
         emitLiveEvent('queue-touch');
         emitLiveEvent('current', { queueId: currentQueueId });
 
-        // 再送後端
-        const res = await api('finishqueue', { queueId:id });
+  box.querySelectorAll('[data-played]').forEach(btn=>{
+    btn.onclick = async () => {
+      if(queueActionBusy){
+        alert('目前有其他播放清單操作進行中，請稍候。');
+        return;
+      }
+
+      const id = String(btn.dataset.played || '').trim();
+      if(!id) return;
+
+      try{
+        lockQueueActions();
+        btn.disabled = true;
+
+        // 先抓最新 queue，避免用到舊畫面資料
+        await syncFast(true);
+
+        const found = getQueueItemById(queue, id);
+        if(!found?.item){
+          throw new Error('找不到這首歌，可能已被其他頁面處理');
+        }
+
+        const { item, idx } = found;
+        const currentIdx = getCurrentQueueIndex(queue);
+        const isCurrentItem = idx === currentIdx;
+
+        setStatus(`單首 +1 處理中：${item.title || id}`);
+
+        const res = await api(
+          'finishqueue',
+          { queueId: id },
+          { timeoutMs: 15000, retries: 2 }
+        );
+
         if(!res || res.ok === false){
           throw new Error(res?.error || 'finishqueue failed');
         }
 
-        // 只做輕同步，不要 syncAll
+        // 完成後再同步，不要先在前端刪歌
         await syncFast(true);
-        setStatus(`單首 +1 完成：${item?.title || '已完成'}`);
-      }catch(e){
-        queue = prevQueue;
-        currentQueueId = prevCurrentId;
-        renderQueue();
+
+        // 成功後才通知其他頁面刷新
         emitLiveEvent('queue-touch');
-        emitLiveEvent('current', { queueId: prevCurrentId });
+
+        // 如果完成的是現在播放那首，就把目前 current 一起通知出去
+        if(isCurrentItem){
+          emitLiveEvent('current', { queueId: String(currentQueueId || '') });
+        }
+
+        setStatus(`單首 +1 完成：${item.title || '已完成'}`);
+      }catch(e){
+        await syncFast(true).catch(()=>{});
         alert('單首 +1 失敗：' + (e?.message || String(e)));
       }finally{
         unlockQueueActions();
@@ -1137,10 +1207,14 @@ async function bulkPlayedQueue(){
     alert('目前有其他播放清單操作進行中，請稍候。');
     return;
   }
+
   if(bulkPlayedBusy){
     alert('一鍵全部 +1 還在處理中，請等目前這次完成。');
     return;
   }
+
+  await syncFast(true);
+
   if(!queue.length){
     alert('目前 Queue 是空的，沒有可以 +1 的歌曲。');
     return;
@@ -1148,40 +1222,51 @@ async function bulkPlayedQueue(){
 
   let success = 0;
   let failed = 0;
-  const total = queue.length;
+  const initialTotal = queue.length;
+  const maxSteps = initialTotal + 5; // 防呆，避免異常狀況卡死 loop
 
   bulkPlayedBusy = true;
   lockQueueActions();
-  setBulkLoading(true, `處理中 0/${total}`);
-  setStatus(`一鍵全部 +1 處理中：0/${total}`);
-  appendBulkLog(`開始一鍵全部 +1，共 ${total} 首`);
+  setBulkLoading(true, `處理中 0/${initialTotal}`);
+  setStatus(`一鍵全部 +1 處理中：0/${initialTotal}`);
+  appendBulkLog(`開始一鍵全部 +1，共 ${initialTotal} 首`);
 
   try{
     let processed = 0;
 
-    while(true){
-      // 每一輪都先跟後端同步，拿最新 queue / 最新 queueId
+    while(processed < maxSteps){
       await syncFast(true);
 
       if(!queue.length){
         break;
       }
 
-      const item = queue[0];
-      const qid = String(item?.id || '').trim();
-      const title = item?.title || `第 ${processed + 1} 首`;
+      const target = getQueueItemForFinish(queue);
+      if(!target?.item){
+        appendBulkLog('停止：目前找不到可處理的 current / queue 項目');
+        break;
+      }
+
+      const item = target.item;
+      const qid = String(item.id || '').trim();
+      const title = item.title || `第 ${processed + 1} 首`;
 
       if(!qid){
         failed++;
         processed++;
         appendBulkLog(`略過：${title}（缺少 queueId）`);
-        setBulkLoading(true, `處理中 ${processed}/${total}`);
-        setStatus(`一鍵全部 +1 處理中：${processed}/${total}`);
+        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
+        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
         break;
       }
 
       try{
-        const res = await api('finishqueue', { queueId: qid });
+        const res = await api(
+          'finishqueue',
+          { queueId: qid },
+          { timeoutMs: 15000, retries: 2 }
+        );
+
         if(!res || res.ok === false){
           throw new Error(res?.error || 'finishqueue failed');
         }
@@ -1193,18 +1278,18 @@ async function bulkPlayedQueue(){
         failed++;
         processed++;
         appendBulkLog(`失敗：${title}｜${err?.message || String(err)}`);
-        setBulkLoading(true, `處理中 ${processed}/${total}`);
-        setStatus(`一鍵全部 +1 處理中：${processed}/${total}`);
+        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
+        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
         break;
       }
 
-      setBulkLoading(true, `處理中 ${processed}/${total}`);
-      setStatus(`一鍵全部 +1 處理中：${processed}/${total}`);
+      setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
+      setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
     }
 
     await syncFast(true);
     emitLiveEvent('queue-touch');
-    emitLiveEvent('current', { queueId: currentQueueId });
+    emitLiveEvent('current', { queueId: String(currentQueueId || '') });
 
     setStatus(`一鍵全部 +1 完成：成功 ${success} 首，失敗 ${failed} 首`);
     appendBulkLog(`批次完成：成功 ${success} 首，失敗 ${failed} 首`);

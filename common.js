@@ -17,14 +17,27 @@ function debounce(fn, ms){
   };
 }
 
+function sleep(ms){
+  return new Promise(r => setTimeout(r, ms));
+}
+
 async function api(action, payload = null, opt = {}){
-  const timeoutMs = opt.timeoutMs ?? 15000;
+  const timeoutMs = opt.timeoutMs ?? 30000;   // 原本 15000，太短，先拉高
   const retries = opt.retries ?? 2;
+  const retryDelayMs = opt.retryDelayMs ?? 800;
+
   let lastErr = null;
 
   for(let attempt = 0; attempt <= retries; attempt++){
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+
+    const timer = setTimeout(() => {
+      try{
+        ctrl.abort(new Error(`API timeout after ${timeoutMs}ms (${action})`));
+      }catch(_){
+        ctrl.abort();
+      }
+    }, timeoutMs);
 
     try{
       const url = new URL(API);
@@ -42,6 +55,7 @@ async function api(action, payload = null, opt = {}){
       url.searchParams.set('_', String(Date.now()));
 
       const res = await fetch(url.toString(), {
+        method: 'GET',
         cache: 'no-store',
         signal: ctrl.signal
       });
@@ -54,7 +68,9 @@ async function api(action, payload = null, opt = {}){
 
       const trimmed = txt.trim();
 
-      if(trimmed === 'ok') return { ok:true, data:'ok' };
+      if(trimmed === 'ok'){
+        return { ok: true, data: 'ok' };
+      }
 
       if(!trimmed.startsWith('{') && !trimmed.startsWith('[')){
         throw new Error('API not JSON: ' + trimmed.slice(0, 160));
@@ -69,7 +85,22 @@ async function api(action, payload = null, opt = {}){
       return data;
     }catch(err){
       lastErr = err;
-      if(attempt < retries) continue;
+
+      const aborted = (
+        err?.name === 'AbortError' ||
+        /aborted/i.test(err?.message || '') ||
+        /timeout/i.test(err?.message || '')
+      );
+
+      if(aborted){
+        lastErr = new Error(`同步逾時：${action} 超過 ${timeoutMs}ms`);
+      }
+
+      if(attempt < retries){
+        await sleep(retryDelayMs * (attempt + 1));
+        continue;
+      }
+
       throw lastErr;
     }finally{
       clearTimeout(timer);

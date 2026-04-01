@@ -3,6 +3,10 @@ function normalizeWishSong(s){return String(s||'').replace(/　/g,' ').replace(/
 let songs = [];
 let queue = [];
 let wishList = [];
+let fastSyncInFlight = false;
+let slowSyncInFlight = false;
+let fastSyncQueued = false;
+let slowSyncQueued = false;
 let currentQueueId = '';
 let currentPage = 'queue';
 let mainCat = '全部';
@@ -527,12 +531,17 @@ async function submitWish(e){
 }
 
 async function syncFast(force){
-  try{
-    const res = await api('queue');
+  if(fastSyncInFlight){
+    if(force) fastSyncQueued = true;
+    return;
+  }
 
+  fastSyncInFlight = true;
+
+  try{
+    const res = await api('queue', null, { timeoutMs: 25000, retries: 2 });
     const newQueue = res.data || [];
     const newCurrentQueueId = String(res.currentQueueId || '');
-
     const newSignature = getQueueSignature(newQueue, newCurrentQueueId);
     const changed = newSignature !== lastQueueSignature;
 
@@ -547,14 +556,27 @@ async function syncFast(force){
     setStatus('已同步：' + new Date().toLocaleTimeString());
   }catch(e){
     setStatus('同步失敗：' + (e?.message || String(e)));
+  }finally{
+    fastSyncInFlight = false;
+    if(fastSyncQueued){
+      fastSyncQueued = false;
+      syncFast(false);
+    }
   }
 }
 
 async function syncSlow(force){
+  if(slowSyncInFlight){
+    if(force) slowSyncQueued = true;
+    return;
+  }
+
+  slowSyncInFlight = true;
+
   try{
-    const [s1,w1] = await Promise.all([
-      api('songs'),
-      api('wish_list')
+    const [s1, w1] = await Promise.all([
+      api('songs', null, { timeoutMs: 30000, retries: 2 }),
+      api('wish_list', null, { timeoutMs: 30000, retries: 2 })
     ]);
 
     songs = s1.data || [];
@@ -567,5 +589,11 @@ async function syncSlow(force){
     setStatus('已同步：' + new Date().toLocaleTimeString());
   }catch(e){
     setStatus('同步失敗：' + (e?.message || String(e)));
+  }finally{
+    slowSyncInFlight = false;
+    if(slowSyncQueued){
+      slowSyncQueued = false;
+      syncSlow(false);
+    }
   }
 }

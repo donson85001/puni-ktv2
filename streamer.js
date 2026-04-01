@@ -12,7 +12,10 @@ let subCat = '全部';
 let leaderboardPage = 1;
 let queueActionBusy = false;
 let bulkPlayedBusy = false;
-
+let fastSyncInFlight = false;
+let slowSyncInFlight = false;
+let fastSyncQueued = false;
+let slowSyncQueued = false;
 const MAIN_CATS = ['全部','女歌手','男歌手','其他'];
 const OTHER_SUBTAGS = ['日','英','韓','Rap','情歌對唱','嗨歌/怪歌','舞蹈'];
 const OBS_LIMITS = [5,10,15,20,25,30];
@@ -1041,8 +1044,15 @@ function renderWishList(){
 }
 
 async function syncFast(force){
+  if(fastSyncInFlight){
+    if(force) fastSyncQueued = true;
+    return;
+  }
+
+  fastSyncInFlight = true;
+
   try{
-    const q1 = await api('queue');
+    const q1 = await api('queue', null, { timeoutMs: 25000, retries: 2 });
     const newQueue = q1.data || [];
     const newCurrentQueueId = String(q1.currentQueueId || currentQueueId || '');
     const newFingerprint = makeQueueFingerprint(newQueue);
@@ -1052,68 +1062,89 @@ async function syncFast(force){
     queue = newQueue;
     currentQueueId = newCurrentQueueId;
 
-    if(!queueActionBusy && (force || (currentPage==='queue' && (queueChanged || currentChanged)))){
+    if(!queueActionBusy && (force || (currentPage === 'queue' && (queueChanged || currentChanged)))){
       renderQueue();
       lastQueueFingerprint = newFingerprint;
       lastRenderedCurrentQueueId = newCurrentQueueId;
     }
 
-    setStatus('已同步：'+new Date().toLocaleTimeString());
+    setStatus('已同步：' + new Date().toLocaleTimeString());
   }catch(e){
-    setStatus('同步失敗：'+(e?.message||String(e)));
+    setStatus('同步失敗：' + (e?.message || String(e)));
+  }finally{
+    fastSyncInFlight = false;
+    if(fastSyncQueued){
+      fastSyncQueued = false;
+      syncFast(false);
+    }
   }
 }
 
 async function syncSlow(force){
-  let slowError = null;
-
-  try{
-    const s1 = await api('songs');
-    songs = Array.isArray(s1) ? s1 : (Array.isArray(s1?.data) ? s1.data : []);
-  }catch(e){
-    slowError = 'songs：' + (e?.message || String(e));
-    songs = [];
-  }
-
-  try{
-    const w1 = await api('wish_list');
-    wishList = Array.isArray(w1) ? w1 : (Array.isArray(w1?.data) ? w1.data : []);
-  }catch(e){
-    if(!slowError) slowError = 'wish_list：' + (e?.message || String(e));
-    wishList = [];
-  }
-
-  try{
-    const st = await api('settings');
-    const settingsData =
-      (st && typeof st === 'object' && !Array.isArray(st))
-        ? (st.data && typeof st.data === 'object' ? st.data : st)
-        : {};
-
-    settings = {
-      obs_limit: Number(settingsData.obs_limit || 30),
-      ...settingsData
-    };
-  }catch(e){
-    if(!slowError) slowError = 'settings：' + (e?.message || String(e));
-    settings = { obs_limit: 30 };
-  }
-
-  if(!OBS_LIMITS.includes(Number(settings.obs_limit))) settings.obs_limit = 30;
-
-  buildObsControls();
-  updateObsUrl();
-
-  if(force || currentPage === 'songs') renderSongs();
-  if(force || currentPage === 'leaderboard') renderLeaderboard();
-  if(force || currentPage === 'wish') renderWishList();
-
-  if(slowError){
-    setStatus('部分同步失敗：' + slowError);
+  if(slowSyncInFlight){
+    if(force) slowSyncQueued = true;
     return;
   }
 
-  setStatus('已同步：' + new Date().toLocaleTimeString());
+  slowSyncInFlight = true;
+
+  let slowError = null;
+
+  try{
+    try{
+      const s1 = await api('songs', null, { timeoutMs: 30000, retries: 2 });
+      songs = Array.isArray(s1) ? s1 : (Array.isArray(s1?.data) ? s1.data : []);
+    }catch(e){
+      slowError = 'songs：' + (e?.message || String(e));
+      songs = [];
+    }
+
+    try{
+      const w1 = await api('wish_list', null, { timeoutMs: 30000, retries: 2 });
+      wishList = Array.isArray(w1) ? w1 : (Array.isArray(w1?.data) ? w1.data : []);
+    }catch(e){
+      if(!slowError) slowError = 'wish_list：' + (e?.message || String(e));
+      wishList = [];
+    }
+
+    try{
+      const st = await api('settings', null, { timeoutMs: 25000, retries: 2 });
+      const settingsData =
+        (st && typeof st === 'object' && !Array.isArray(st))
+          ? (st.data && typeof st.data === 'object' ? st.data : st)
+          : {};
+
+      settings = {
+        obs_limit: Number(settingsData.obs_limit || 30),
+        ...settingsData
+      };
+    }catch(e){
+      if(!slowError) slowError = 'settings：' + (e?.message || String(e));
+      settings = { obs_limit: 30 };
+    }
+
+    if(!OBS_LIMITS.includes(Number(settings.obs_limit))) settings.obs_limit = 30;
+
+    buildObsControls();
+    updateObsUrl();
+
+    if(force || currentPage === 'songs') renderSongs();
+    if(force || currentPage === 'leaderboard') renderLeaderboard();
+    if(force || currentPage === 'wish') renderWishList();
+
+    if(slowError){
+      setStatus('部分同步失敗：' + slowError);
+      return;
+    }
+
+    setStatus('已同步：' + new Date().toLocaleTimeString());
+  }finally{
+    slowSyncInFlight = false;
+    if(slowSyncQueued){
+      slowSyncQueued = false;
+      syncSlow(false);
+    }
+  }
 }
 
 async function syncAll(force){

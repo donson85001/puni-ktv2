@@ -204,25 +204,39 @@ async function login(){
 
 function logout(){
   localStorage.removeItem(LS_AUTH);
-  authed=false;
-  $('app').style.display='none';
-  $('gate').style.display='grid';
+  authed = false;
+
+  if(fastTimer){
+    clearInterval(fastTimer);
+    fastTimer = null;
+  }
+  if(slowTimer){
+    clearInterval(slowTimer);
+    slowTimer = null;
+  }
+
+  if($('app')) $('app').style.display = 'none';
+  if($('gate')) $('gate').style.display = 'grid';
 }
 
 function enterApp(){
   authed = true;
-  $('gate').style.display = 'none';
-  $('app').style.display = 'block';
 
-  // 跟觀眾頁一樣，先各自啟動同步
-  syncSlow(true);
-  syncFast(true);
+  if($('gate')) $('gate').style.display = 'none';
+  if($('app')) $('app').style.display = 'block';
 
-  setInterval(()=>{
+  // 避免重複進入時重複開輪詢
+  if(fastTimer) clearInterval(fastTimer);
+  if(slowTimer) clearInterval(slowTimer);
+
+  syncSlow(true).catch(()=>{});
+  syncFast(true).catch(()=>{});
+
+  fastTimer = setInterval(()=>{
     if(authed) syncFast(false);
   }, FAST_MS);
 
-  setInterval(()=>{
+  slowTimer = setInterval(()=>{
     if(authed) syncSlow(false);
   }, SLOW_MS);
 }
@@ -1210,28 +1224,31 @@ async function bulkPlayedQueue(){
     alert('目前有其他播放清單操作進行中，請稍候。');
     return;
   }
+
   if(bulkPlayedBusy){
-    alert('一鍵全部 +1 還在處理中，請等目前這次完成。');
+    alert('一鍵全部 +1 還在處理中，請稍候。');
     return;
   }
-
-  await syncFast(true);
-  if(!queue.length){
-    alert('目前 Queue 是空的，沒有可以 +1 的歌曲。');
-    return;
-  }
-
-  const total = queue.length;
 
   try{
     bulkPlayedBusy = true;
     lockQueueActions();
+
+    await syncFast(true);
+
+    if(!queue.length){
+      alert('目前 Queue 是空的，沒有可處理歌曲。');
+      return;
+    }
+
+    const total = queue.length;
+
     setBulkLoading(true, `處理中 0/${total}`);
-    setStatus(`一鍵全部 +1 處理中：0/${total}`);
+    setStatus(`一鍵全部 +1 處理中：共 ${total} 首`);
     appendBulkLog(`開始一鍵全部 +1，共 ${total} 首`);
 
     const res = await api('bulkcomplete', null, {
-      timeoutMs: 30000,
+      timeoutMs: 35000,
       retries: 1
     });
 
@@ -1240,20 +1257,25 @@ async function bulkPlayedQueue(){
     }
 
     await syncFast(true);
+    await syncSlow(true).catch(()=>{});
+
     emitLiveEvent('queue-touch');
     emitLiveEvent('current', { queueId: '' });
 
     const processed = Number(res?.data?.processed || total || 0);
-    setStatus(`一鍵全部 +1 完成：成功 ${processed} 首，失敗 0 首`);
-    appendBulkLog(`批次完成：成功 ${processed} 首，失敗 0 首`);
+
+    setStatus(`一鍵全部 +1 完成：成功 ${processed} 首`);
+    appendBulkLog(`一鍵全部 +1 完成：成功 ${processed} 首`);
   }catch(e){
-    setStatus('一鍵全部 +1 失敗：' + (e?.message || String(e)));
-    appendBulkLog('批次失敗：' + (e?.message || String(e)));
-    alert('一鍵全部 +1 失敗：' + (e?.message || String(e)));
+    const msg = e?.message || String(e);
+    setStatus('一鍵全部 +1 失敗：' + msg);
+    appendBulkLog('一鍵全部 +1 失敗：' + msg);
+    alert('一鍵全部 +1 失敗：' + msg);
   }finally{
     bulkPlayedBusy = false;
     setBulkLoading(false);
     unlockQueueActions();
+    await syncFast(true).catch(()=>{});
   }
 }
 

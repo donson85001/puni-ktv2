@@ -32,7 +32,6 @@ const LIVE_BUS_NAME = 'puni_live_bus_v1';
 const LIVE_BUS_KEY = 'puni_live_bus_payload_v1';
 const liveBus = ('BroadcastChannel' in window) ? new BroadcastChannel(LIVE_BUS_NAME) : null;
 
-
 function emitLiveEvent(type, payload = {}) {
   const packet = {
     type,
@@ -88,7 +87,6 @@ function setStatus(t){
 function setGateMsg(t){
   if($('gateMsg')) $('gateMsg').textContent=t;
 }
-
 
 function setBulkLoading(isLoading, label=''){
   const btn = $('bulkPlayedBtn');
@@ -154,6 +152,7 @@ function queueState(q, idx){
 
   return 'pending';
 }
+
 function getCurrentQueueIndex(list, fallbackCurrentId = currentQueueId){
   const currentId = String(fallbackCurrentId || '');
 
@@ -188,6 +187,7 @@ function getQueueItemById(list, queueId){
     item: list[idx]
   };
 }
+
 async function login(){
   const pw=($('pw')?.value||'').trim();
 
@@ -299,7 +299,6 @@ function rebuildSubtagChips(){
 
   box.innerHTML = '';
 
-  // 大分類是「全部」時，小分類整塊直接隱藏
   if (mainCat === '全部') {
     subCat = '全部';
     box.classList.add('hidden');
@@ -356,6 +355,7 @@ function filterSongsByCategory(list){
 
   return out;
 }
+
 function fitQueueSongNames(scope=document){
   const rows = scope.querySelectorAll('.queue-row');
 
@@ -408,22 +408,6 @@ function stopMarqueeHolder(holder, baseClass){
     holder.innerHTML = `<span class="obs-title-text">${esc(originalText)}</span>`;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function runHorizontalMarquee(holder, options){
   if(!holder) return false;
@@ -632,20 +616,16 @@ function renderQueue(){
         lockQueueActions();
         btn.disabled = true;
 
-        // 先改本機畫面，讓「現在播放」立刻反應
         currentQueueId = nextId;
         renderQueue();
 
-        // 通知同機 audience / obs 立即更新
         emitLiveEvent('current', { queueId: nextId });
 
-        // 再送後端
         const res = await api('setcurrent', { queueId: nextId });
         if(!res || res.ok === false){
           throw new Error(res?.error || 'setcurrent failed');
         }
 
-        // 最後做輕同步
         await syncFast(true);
       }catch(e){
         currentQueueId = prevId;
@@ -702,8 +682,6 @@ function renderQueue(){
     };
   });
 
-  
-
   box.querySelectorAll('[data-played]').forEach(btn=>{
     btn.onclick = async () => {
       if(queueActionBusy){
@@ -718,7 +696,6 @@ function renderQueue(){
         lockQueueActions();
         btn.disabled = true;
 
-        // 先抓最新 queue，避免用到舊畫面資料
         await syncFast(true);
 
         const found = getQueueItemById(queue, id);
@@ -742,13 +719,10 @@ function renderQueue(){
           throw new Error(res?.error || 'finishqueue failed');
         }
 
-        // 完成後再同步，不要先在前端刪歌
         await syncFast(true);
 
-        // 成功後才通知其他頁面刷新
         emitLiveEvent('queue-touch');
 
-        // 如果完成的是現在播放那首，就把目前 current 一起通知出去
         if(isCurrentItem){
           emitLiveEvent('current', { queueId: String(currentQueueId || '') });
         }
@@ -787,7 +761,6 @@ function renderQueue(){
   lastQueueFingerprint = makeQueueFingerprint(queue);
   lastRenderedCurrentQueueId = String(currentQueueId || '');
 }
-
 
 function makeSongCard(s){
   return `
@@ -832,17 +805,16 @@ function wireSongButtons(scope=document){
   });
 }
 
-
 function renderSongs(){
   const grid=$('songGrid');
   if(!grid) return;
 
-if(!songs.length){
-  rebuildMainCatChips();
-  rebuildSubtagChips();
-  grid.innerHTML = '<div class="empty-state">歌曲載入中…</div>';
-  return;
-}
+  if(!songs.length){
+    rebuildMainCatChips();
+    rebuildSubtagChips();
+    grid.innerHTML = '<div class="empty-state">歌曲載入中…</div>';
+    return;
+  }
 
   rebuildMainCatChips();
   rebuildSubtagChips();
@@ -891,7 +863,7 @@ function renderLeaderboard(){
         <div class="song-artist">${esc(s.artist || s.subtag || '')}</div>
         <div class="song-actions">
           <span class="pill">${esc(s.category||'')}</span>
-          <span class="pill">播放 ${Number(s.plays||0)}</span>
+          <span class="pill">播放 ${Number(s.plays || 0)}</span>
           <button class="btn btn-mini btn-primary" data-songid="${esc(s.id)}">加入 Queue</button>
         </div>
       </div>
@@ -955,7 +927,6 @@ function parseWishDate(dateValue, timeValue){
   let minute = 0;
   let second = 0;
 
-  // 1) 日期：先處理 Apps Script / Sheet 送來的 ISO 字串
   if(rawDate.includes('T')){
     const p = getTaipeiPartsFromDate(rawDate);
     if(p){
@@ -965,7 +936,6 @@ function parseWishDate(dateValue, timeValue){
     }
   }
 
-  // 2) 日期：一般 yyyy/MM/dd 或 yyyy-MM-dd
   if(!year || !month || !day){
     const ymd = rawDate.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
     if(ymd){
@@ -975,7 +945,6 @@ function parseWishDate(dateValue, timeValue){
     }
   }
 
-  // 3) 時間：先處理 ISO 字串（例如 1899-12-30T15:21:58.000Z）
   if(rawTime.includes('T')){
     const p = getTaipeiPartsFromDate(rawTime);
     if(p){
@@ -985,7 +954,6 @@ function parseWishDate(dateValue, timeValue){
     }
   }
 
-  // 4) 時間：中文 上午/下午
   if(rawTime && hour === 0 && minute === 0 && second === 0){
     const zhTime = rawTime.match(/(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if(zhTime){
@@ -998,7 +966,6 @@ function parseWishDate(dateValue, timeValue){
     }
   }
 
-  // 5) 時間：一般 HH:mm:ss
   if(rawTime && hour === 0 && minute === 0 && second === 0){
     const normalTime = rawTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if(normalTime){

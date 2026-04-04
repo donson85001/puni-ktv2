@@ -1210,85 +1210,52 @@ async function bulkPlayedQueue(){
     alert('目前有其他播放清單操作進行中，請稍候。');
     return;
   }
-
   if(bulkPlayedBusy){
     alert('一鍵全部 +1 還在處理中，請等目前這次完成。');
     return;
   }
 
   await syncFast(true);
-
   if(!queue.length){
     alert('目前 Queue 是空的，沒有可以 +1 的歌曲。');
     return;
   }
 
-  let success = 0;
-  let failed = 0;
-  const initialTotal = queue.length;
-  const maxSteps = initialTotal + 5; // 防呆，避免異常狀況卡死 loop
-
-  bulkPlayedBusy = true;
-  lockQueueActions();
-  setBulkLoading(true, `處理中 0/${initialTotal}`);
-  setStatus(`一鍵全部 +1 處理中：0/${initialTotal}`);
-  appendBulkLog(`開始一鍵全部 +1，共 ${initialTotal} 首`);
+  const total = queue.length;
 
   try{
-    let processed = 0;
+    bulkPlayedBusy = true;
+    lockQueueActions();
+    setBulkLoading(true, `處理中 0/${total}`);
+    setStatus(`一鍵全部 +1 處理中：0/${total}`);
+    appendBulkLog(`開始一鍵全部 +1，共 ${total} 首`);
 
-    while(processed < maxSteps){
-      await syncFast(true);
+    const res = await api('bulkcomplete', null, {
+      timeoutMs: 30000,
+      retries: 1
+    });
 
-      if(!queue.length){
-        break;
-      }
-
-      const target = getQueueItemForFinish(queue);
-      if(!target?.item){
-        appendBulkLog('停止：目前找不到可處理的 current / queue 項目');
-        break;
-      }
-
-      const item = target.item;
-      const qid = String(item.id || '').trim();
-      const title = item.title || `第 ${processed + 1} 首`;
-
-      if(!qid){
-        failed++;
-        processed++;
-        appendBulkLog(`略過：${title}（缺少 queueId）`);
-        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
-        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
-        break;
-      }
-
-      try{
-        const res = await api(
-          'finishqueue',
-          { queueId: qid },
-          { timeoutMs: 15000, retries: 2 }
-        );
-
-        if(!res || res.ok === false){
-          throw new Error(res?.error || 'finishqueue failed');
-        }
-
-        success++;
-        processed++;
-        appendBulkLog(`完成：${title}`);
-      }catch(err){
-        failed++;
-        processed++;
-        appendBulkLog(`失敗：${title}｜${err?.message || String(err)}`);
-        setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
-        setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
-        break;
-      }
-
-      setBulkLoading(true, `處理中 ${processed}/${initialTotal}`);
-      setStatus(`一鍵全部 +1 處理中：${processed}/${initialTotal}`);
+    if(!res || res.ok === false){
+      throw new Error(res?.error || 'bulkcomplete failed');
     }
+
+    await syncFast(true);
+    emitLiveEvent('queue-touch');
+    emitLiveEvent('current', { queueId: '' });
+
+    const processed = Number(res?.data?.processed || total || 0);
+    setStatus(`一鍵全部 +1 完成：成功 ${processed} 首，失敗 0 首`);
+    appendBulkLog(`批次完成：成功 ${processed} 首，失敗 0 首`);
+  }catch(e){
+    setStatus('一鍵全部 +1 失敗：' + (e?.message || String(e)));
+    appendBulkLog('批次失敗：' + (e?.message || String(e)));
+    alert('一鍵全部 +1 失敗：' + (e?.message || String(e)));
+  }finally{
+    bulkPlayedBusy = false;
+    setBulkLoading(false);
+    unlockQueueActions();
+  }
+}
 
     await syncFast(true);
     emitLiveEvent('queue-touch');

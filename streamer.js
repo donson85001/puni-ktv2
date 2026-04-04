@@ -16,6 +16,8 @@ let fastSyncInFlight = false;
 let slowSyncInFlight = false;
 let fastSyncQueued = false;
 let slowSyncQueued = false;
+let fastTimer = null;
+let slowTimer = null;
 const MAIN_CATS = ['全部','女歌手','男歌手','其他'];
 const OTHER_SUBTAGS = ['日','英','韓','Rap','情歌對唱','嗨歌/怪歌','舞蹈'];
 const OBS_LIMITS = [5,10,15,20,25,30];
@@ -225,9 +227,14 @@ function enterApp(){
   if($('gate')) $('gate').style.display = 'none';
   if($('app')) $('app').style.display = 'block';
 
-  // 避免重複進入時重複開輪詢
-  if(fastTimer) clearInterval(fastTimer);
-  if(slowTimer) clearInterval(slowTimer);
+  if(fastTimer){
+    clearInterval(fastTimer);
+    fastTimer = null;
+  }
+  if(slowTimer){
+    clearInterval(slowTimer);
+    slowTimer = null;
+  }
 
   syncSlow(true).catch(()=>{});
   syncFast(true).catch(()=>{});
@@ -1152,6 +1159,8 @@ async function syncSlow(force){
     }
 
     setStatus('已同步：' + new Date().toLocaleTimeString());
+  }catch(e){
+    setStatus('同步失敗：' + (e?.message || String(e)));
   }finally{
     slowSyncInFlight = false;
     if(slowSyncQueued){
@@ -1276,23 +1285,6 @@ async function bulkPlayedQueue(){
     setBulkLoading(false);
     unlockQueueActions();
     await syncFast(true).catch(()=>{});
-  }
-}
-
-    await syncFast(true);
-    emitLiveEvent('queue-touch');
-    emitLiveEvent('current', { queueId: String(currentQueueId || '') });
-
-    setStatus(`一鍵全部 +1 完成：成功 ${success} 首，失敗 ${failed} 首`);
-    appendBulkLog(`批次完成：成功 ${success} 首，失敗 ${failed} 首`);
-  }catch(e){
-    setStatus('一鍵全部 +1 失敗：' + (e?.message || String(e)));
-    appendBulkLog('批次失敗：' + (e?.message || String(e)));
-    alert('一鍵全部 +1 失敗：' + (e?.message || String(e)));
-  }finally{
-    bulkPlayedBusy = false;
-    setBulkLoading(false);
-    unlockQueueActions();
   }
 }
 
